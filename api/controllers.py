@@ -16,6 +16,10 @@ def post_import():
     import_ = request.get_json()
     try:
         validate(instance=import_, schema=citizens_schema)
+        for citizen in import_["citizens"]:
+            validate_birth_date(citizen["birth_date"])
+            validate_gender(citizen["gender"])
+            validate_relatives(citizen, import_["citizens"])
     except ValidationError:
         abort(400)
     import_id = db.imports.count_documents({}) + 1
