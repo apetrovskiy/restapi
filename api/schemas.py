@@ -61,3 +61,10 @@ def validate_relatives(citizen, citizens):
         e = next((ctz for ctz in citizens if ctz['citizen_id'] == c_id), None)
         if citizen["citizen_id"] not in e["relatives"]:
             raise ValidationError("Родственные связи двусторонние")
+
+
+def validate_unique_citizen_id(citizen, c_ids):
+    if citizen['citizen_id'] in c_ids:
+        raise ValidationError("Уникальный идентификатор жителя")
+    else:
+        c_ids.append(citizen['citizen_id'])
