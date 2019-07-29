@@ -9,7 +9,7 @@ def create_app():
     app = Flask(__name__)
     app.config.from_mapping(
         MONGO_URI=os.environ.get("MONGO_URI", "mongodb://localhost:27017/"),
-        MONGO_DB_NAME=os.environ.get("MONGO_DB_NAME", "dev5")
+        MONGO_DB_NAME=os.environ.get("MONGO_DB_NAME", "dev")
     )
 
     from . import db

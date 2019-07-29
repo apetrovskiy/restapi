@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
+from datetime import datetime, date
+
 from flask import Blueprint, request, jsonify, abort, current_app
 from jsonschema import validate, ValidationError
+from numpy import percentile
 
 from api.schemas import (
     ctzn_schema, imp_schema, get_ctzn, validate_relatives, validate_unique_id)
@@ -86,7 +89,7 @@ def get_ctzns(imp_id: int):
 
 
 @bp.route('/imports/<int:imp_id>/citizens/birthdays', methods=['GET'])
-def get_birthdays(imp_id):
+def get_birthdays(imp_id: int):
     db = get_db()
     try:
         ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
@@ -108,6 +111,41 @@ def get_birthdays(imp_id):
                     {"citizen_id": ctzn["citizen_id"], "presents": 1})
 
     return jsonify({"data": months}), 200
+
+
+@bp.route('/imports/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
+def get_age_stat(imp_id: int):
+    db = get_db()
+    try:
+        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
+    except TypeError:
+        abort(404)
+
+    towns = {}
+
+    for ctzn in ctzns:
+        birth_date = datetime.strptime(ctzn["birth_date"].strip(), "%d.%m.%Y")
+        today = date.today()
+        age = today.year - birth_date.year - int(
+                (today.month, today.day) < (birth_date.month, birth_date.day)
+            )
+
+        try:
+            towns[ctzn["town"]].append(age)
+        except KeyError:
+            towns[ctzn["town"]] = [age]
+
+    stats = []
+
+    for town in towns:
+        stat = {}
+        stat["town"] = town
+        stat["p50"] = percentile(towns[town], 50, interpolation='linear')
+        stat["p75"] = percentile(towns[town], 75, interpolation='linear')
+        stat["p99"] = percentile(towns[town], 99, interpolation='linear')
+        stats.append(stat)
+
+    return jsonify({"data": stats}), 200
 
 
 @bp.errorhandler(404)

@@ -228,3 +228,19 @@ def test_get_birthdays(client):
                 ]
             }
         }
+
+
+def test_get_age_stat(client):
+    test_get_birthdays(client)
+    response = client.get('/imports/1/towns/stat/percentile/age')
+    assert response.status_code == 200
+    assert json.loads(response.data) == {
+        "data": [
+            {
+                "town": "Москва",
+                "p50": 32,
+                "p75": 32,
+                "p99": 32
+            }
+        ]
+    }

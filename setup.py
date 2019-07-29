@@ -11,6 +11,7 @@ setup(
         'flask',
         'pymongo',
         'jsonschema',
-        'pytest'
+        'pytest',
+        'numpy'
     ]
 )
