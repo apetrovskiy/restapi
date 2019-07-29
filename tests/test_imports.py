@@ -129,3 +129,42 @@ def test_get_citizens(client):
     }
 
     assert json.loads(response.data) == r
+
+
+def test_get_birthdays(client):
+    test_patch_citizens(client)
+    response = client.get('/imports/1/citizens/birthdays')
+    assert response.status_code == 200
+    r = {
+        "data": {
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [{
+                "citizen_id": 1,
+                "presents": 1,
+                 }],
+            "5": [],
+            "6": [],
+            "7": [],
+            "8": [],
+            "9": [],
+            "10": [],
+            "11": [{
+                "citizen_id": 1,
+                "presents": 1
+                  }],
+            "12": [
+                {
+                    "citizen_id": 2,
+                    "presents": 1
+                },
+                {
+                    "citizen_id": 3,
+                    "presents": 1
+                }
+                ]
+            }
+        }
+
+    assert json.loads(response.data) == r

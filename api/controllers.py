@@ -69,6 +69,31 @@ def patch_citizen(import_id, citizen_id):
     return jsonify({"data": citizen}), 200
 
 
+@bp.route('/imports/<int:import_id>/citizens/birthdays', methods=['GET'])
+def get_birthdays(import_id):
+    db = get_db()
+    data = db.imports.find_one({"data.import_id": import_id})
+    if not data:
+        abort(404)
+    months = {}
+    for i in range(1, 13):
+        months[str(i)] = []
+
+    for citizen in data["citizens"]:
+        for rel_id in citizen["relatives"]:
+            ctz = next((ctz for ctz in data["citizens"] if ctz['citizen_id'] == rel_id), None)
+            b_d = int(ctz["birth_date"].split('.')[1])
+            assert 1 <= b_d <= 12  # Проверять при первичной валидации
+
+            ctz = next((ctz for ctz in months[str(b_d)] if ctz['citizen_id'] == citizen["citizen_id"]), None)
+            if ctz:
+                ctz["presents"] += 1
+            else:
+                months[str(b_d)].append({"citizen_id": citizen["citizen_id"], "presents": 1})
+
+    return jsonify({"data": months}), 200
+
+
 @bp.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Not found'}), 404
