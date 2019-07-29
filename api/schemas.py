@@ -17,10 +17,17 @@ citizens_schema = {
                     "building": {"type": "string", "minLength": 1},
                     "apartment": {"type": "integer", "minimum": 1},
                     "name": {"type": "string", "minLength": 1},
-                    "birth_date": {"type": "string", "minLength": 1},
-                    "gender": {"type": "string", "minLength": 1},
+                    "birth_date": {
+                        "type": "string",
+                        "pattern": "[0-9]{2}\\.[0-9]{2}\\.[0-9]{4}"
+                        },
+                    "gender": {
+                        "type": "string",
+                        "enum": ["male", "female"]
+                        },
                     "relatives": {
                         "type": "array",
+                        "uniqueItems": True,
                         "items": {"type": "integer", "minimum": 1}
                     }
                 },
@@ -46,20 +53,10 @@ citizens_schema = {
 }
 
 
-def validate_birth_date(birth_date):
-    if not re.match(r"\s*\d{2}\.\d{2}\.\d{4}\s*", birth_date):
-        raise ValidationError("Дата рождения в формате ДД.ММ.ГГГГ")
-
-
-def validate_gender(gender):
-    if gender not in ['male', 'female']:
-        raise ValidationError("Значения male, female")
-
-
 def validate_relatives(citizen, citizens):
-    for c_id in citizen["relatives"]:
-        e = next((ctz for ctz in citizens if ctz['citizen_id'] == c_id), None)
-        if citizen["citizen_id"] not in e["relatives"]:
+    for rel_id in citizen["relatives"]:
+        ctz = next((ctz for ctz in citizens if ctz['citizen_id'] == rel_id), None)
+        if citizen["citizen_id"] not in ctz["relatives"]:
             raise ValidationError("Родственные связи двусторонние")
 
 
