@@ -77,7 +77,6 @@ def validate_unique_id(c_id: int, c_ids: set):
 ctzn_schema = {
     "type": "object",
     "properties": {
-        "citizen_id": {"type": "integer", "minimum": 1},
         "town": {"type": "string", "minLength": 1},
         "street": {"type": "string", "minLength": 1},
         "building": {"type": "string", "minLength": 1},
@@ -97,5 +96,6 @@ ctzn_schema = {
             "items": {"type": "integer", "minimum": 1}
         }
     },
+    "minProperties": 1,
     "additionalProperties": False,
 }

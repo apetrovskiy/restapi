@@ -26,6 +26,6 @@
 > venv/bin/activate
 > set FLASK_APP=api
 > set FLASK_ENV=development
-> pytest
+> pytest -vv --durations=0
 > python -m flask run
 ```

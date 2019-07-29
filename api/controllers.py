@@ -2,7 +2,7 @@
 
 from datetime import datetime, date
 
-from flask import Blueprint, request, jsonify, abort, current_app
+from flask import Blueprint, request, jsonify, abort
 from jsonschema import validate, ValidationError
 from numpy import percentile
 
@@ -28,6 +28,10 @@ def post_imp():
             validate_relatives(ctzn, imp["citizens"])
 
     except ValidationError:
+        abort(400)
+    except TypeError:
+        abort(400)
+    except KeyError:
         abort(400)
 
     imp_id = db.imports.count_documents({}) + 1

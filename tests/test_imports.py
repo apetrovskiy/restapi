@@ -5,6 +5,27 @@ import json
 from api.db import get_db
 
 
+def test_plain_text(client):
+    response = client.post(
+        '/imports',
+        data="plain text")
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request"
+    }
+
+
+def test_emty_json(client):
+    response = client.post(
+        '/imports',
+        data=json.dumps({}),
+        content_type='application/json')
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request"
+    }
+
+
 def test_post_imp_val_rels(client):
     # Недвусторонние родственные связи
     response = client.post(
@@ -117,6 +138,29 @@ def test_post_imp(client):
         "data": {
             "import_id": 1
         }
+    }
+
+
+def test_plain_text_patch(client):
+    test_post_imp(client)
+    response = client.patch(
+        '/imports/1/citizens/3',
+        data="plain text")
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request"
+    }
+
+
+def test_json_patch(client):
+    test_post_imp(client)
+    response = client.patch(
+        '/imports/1/citizens/3',
+        data=json.dumps({}),
+        content_type='application/json')
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request"
     }
 
 
@@ -244,3 +288,47 @@ def test_get_age_stat(client):
             }
         ]
     }
+
+
+def test_stress_post(client):
+    ctzns = []
+
+    for c_id in range(1, 10001):
+        ctzn = {
+            "citizen_id": c_id,
+            "town": "Керчь",
+            "street": "Иосифа Бродского",
+            "building": "2",
+            "apartment": 11,
+            "name": "Романова Мария Леонидовна",
+            "birth_date": "23.11.1986",
+            "gender": "female",
+            "relatives": [10001-c_id]
+        }
+        ctzns.append(ctzn)
+
+    response = client.post(
+        '/imports',
+        data=json.dumps(
+            {
+                "citizens": ctzns
+            }),
+        content_type='application/json')
+    assert response.status_code == 201
+    assert json.loads(response.data) == {
+        "data": {
+            "import_id": 1
+        }
+    }
+
+
+def test_stress_birthdays(client):
+    test_stress_post(client)
+    response = client.get('/imports/1/citizens/birthdays')
+    assert response.status_code == 200
+
+
+def test_stress_age(client):
+    test_stress_post(client)
+    response = client.get('/imports/1/towns/stat/percentile/age')
+    assert response.status_code == 200
