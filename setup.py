@@ -12,6 +12,7 @@ setup(
         'pymongo',
         'jsonschema',
         'pytest',
-        'numpy'
+        'numpy',
+        'gunicorn'
     ]
 )
