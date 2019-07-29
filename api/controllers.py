@@ -112,14 +112,14 @@ def get_birthdays(imp_id):
 
 @bp.errorhandler(404)
 def not_found(error):
-    return jsonify({'error': 'Not found'}), 404
+    return jsonify({"error": "Not found"}), 404
 
 
 @bp.errorhandler(400)
 def bad_request(error):
-    return jsonify({'error': 'Bad Request'}), 400
+    return jsonify({"error": "Bad Request"}), 400
 
 
 @bp.errorhandler(500)
 def internal_server_error(error):
-    return jsonify({'error': 'Internal Server Error'}), 500
+    return jsonify({"error": "Internal Server Error"}), 500
