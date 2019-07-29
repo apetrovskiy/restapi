@@ -7,22 +7,22 @@
 ## Установка pip
 
 ```shell
-> sudo apt install python3-pip
+sudo apt install python3-pip
 ```
 
 ## Установка MongoDB
 
 ```shell
-> sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
-> echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
-> sudo apt-get update
-> sudo apt-get install -y mongodb-org
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv EA312927
+echo "deb http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/3.2 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.2.list
+sudo apt-get update
+sudo apt-get install -y mongodb-org
 ```
 
 ## mongodb.service
 
 ```shell
-> sudo nano /etc/systemd/system/mongodb.service
+sudo nano /etc/systemd/system/mongodb.service
 ```
 
 ```
@@ -39,26 +39,26 @@ WantedBy=multi-user.target
 ```
 
 ```shell
-> sudo systemctl start mongodb
-> sudo systemctl enable mongodb
-> sudo systemctl status mongodb
+sudo systemctl start mongodb
+sudo systemctl enable mongodb
+sudo systemctl status mongodb
 ```
 
 ## Установка restapi
 
 ```shell
-> git clone https://github.com/egorchistov/restapi
-> cd restapi
-> python3 -m venv venv
-> . venv/bin/activate
-> pip install -e .
-> deactivate
+git clone https://github.com/egorchistov/restapi
+cd restapi
+python3 -m venv venv
+. venv/bin/activate
+pip install -e .
+deactivate
 ```
 
 ## restapi.service
 
 ```shell
-> sudo nano /etc/systemd/system/restapi.service
+sudo nano /etc/systemd/system/restapi.service
 ```
 
 ```
@@ -79,9 +79,9 @@ WantedBy=multi-user.target
 ```
 
 ```shell
-> sudo systemctl start restapi
-> sudo systemctl enable restapi
-> sudo systemctl status restapi
+sudo systemctl start restapi
+sudo systemctl enable restapi
+sudo systemctl status restapi
 ```
 
 # Переменные окружения:
@@ -92,9 +92,9 @@ WantedBy=multi-user.target
 # Windows: Тесты и сервер для разработки
 
 ```shell
-> venv/bin/activate
-> set FLASK_APP=api
-> set FLASK_ENV=development
-> pytest -vv --durations=0
-> python -m flask run
+venv/bin/activate
+set FLASK_APP=api
+set FLASK_ENV=development
+pytest -vv --durations=0
+python -m flask run
 ```
