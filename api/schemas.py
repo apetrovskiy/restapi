@@ -19,7 +19,7 @@ citizens_schema = {
                     "name": {"type": "string", "minLength": 1},
                     "birth_date": {
                         "type": "string",
-                        "pattern": "[0-9]{2}\\.[0-9]{2}\\.[0-9]{4}"
+                        "pattern": "[0-9]{2}\\.(0[1-9]|10|11|12)\\.[0-9]{4}"
                         },
                     "gender": {
                         "type": "string",

@@ -83,7 +83,6 @@ def get_birthdays(import_id):
         for rel_id in citizen["relatives"]:
             ctz = next((ctz for ctz in data["citizens"] if ctz['citizen_id'] == rel_id), None)
             b_d = int(ctz["birth_date"].split('.')[1])
-            assert 1 <= b_d <= 12  # Проверять при первичной валидации
 
             ctz = next((ctz for ctz in months[str(b_d)] if ctz['citizen_id'] == citizen["citizen_id"]), None)
             if ctz:
