@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import re
 from jsonschema import ValidationError
 
-citizens_schema = {
+imp_schema = {
     "type": "object",
     "properties": {
         "citizens": {
@@ -53,21 +52,29 @@ citizens_schema = {
 }
 
 
-def validate_relatives(citizen, citizens):
-    for rel_id in citizen["relatives"]:
-        ctz = next((ctz for ctz in citizens if ctz['citizen_id'] == rel_id), None)
-        if citizen["citizen_id"] not in ctz["relatives"]:
+def get_ctzn(id_: int, ctzns: list):
+    for ctzn in ctzns:
+        if ctzn["citizen_id"] == id_:
+            return ctzn
+
+    return None
+
+
+def validate_relatives(ctzn: dict, ctzns: list):
+    for rel_id in ctzn["relatives"]:
+        rel = get_ctzn(rel_id, ctzns)
+        if ctzn["citizen_id"] not in rel["relatives"]:
             raise ValidationError("Родственные связи двусторонние")
 
 
-def validate_unique_citizen_id(citizen, c_ids):
-    if citizen['citizen_id'] in c_ids:
+def validate_unique_id(c_id: int, c_ids: set):
+    if c_id in c_ids:
         raise ValidationError("Уникальный идентификатор жителя")
     else:
-        c_ids.append(citizen['citizen_id'])
+        c_ids.add(c_id)
 
 
-patch_citizen_schema = {
+ctzn_schema = {
     "type": "object",
     "properties": {
         "citizen_id": {"type": "integer", "minimum": 1},
@@ -78,7 +85,7 @@ patch_citizen_schema = {
         "name": {"type": "string", "minLength": 1},
         "birth_date": {
             "type": "string",
-            "pattern": "[0-9]{2}\\.[0-9]{2}\\.[0-9]{4}"
+            "pattern": "[0-9]{2}\\.(0[1-9]|10|11|12)\\.[0-9]{4}"
             },
         "gender": {
             "type": "string",

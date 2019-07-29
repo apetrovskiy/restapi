@@ -3,7 +3,8 @@
 from flask import Blueprint, request, jsonify, abort, current_app
 from jsonschema import validate, ValidationError
 
-from api.schemas import *
+from api.schemas import (
+    ctzn_schema, imp_schema, get_ctzn, validate_relatives, validate_unique_id)
 from api.db import get_db
 
 
@@ -11,84 +12,100 @@ bp = Blueprint('controllers', __name__)
 
 
 @bp.route('/imports', methods=['POST'])
-def post_import():
+def post_imp():
     db = get_db()
-    import_ = request.get_json()
+    imp = request.get_json()
+
     try:
-        validate(instance=import_, schema=citizens_schema)
-        c_ids = []
-        for citizen in import_["citizens"]:
-            validate_unique_citizen_id(citizen, c_ids)
-            validate_relatives(citizen, import_["citizens"])
+        validate(instance=imp, schema=imp_schema)
+
+        c_ids = set()  # Использованные citizen_id
+        for ctzn in imp["citizens"]:
+            validate_unique_id(ctzn["citizen_id"], c_ids)
+            validate_relatives(ctzn, imp["citizens"])
+
     except ValidationError:
         abort(400)
-    import_id = db.imports.count_documents({}) + 1
-    import_["data"] = {"import_id": import_id}
-    db.imports.insert_one(import_)
-    return jsonify({"data": import_["data"]}), 201
+
+    imp_id = db.imports.count_documents({}) + 1
+    imp["data"] = {"import_id": imp_id}
+    db.imports.insert_one(imp)
+
+    return jsonify({"data": imp["data"]}), 201
 
 
-@bp.route('/imports/<int:import_id>/citizens', methods=['GET'])
-def get_citizens(import_id):
-    db = get_db()
-    data = db.imports.find_one({"data.import_id": import_id})
-    if not data:
-        abort(404)
-    return jsonify({"data": data["citizens"]}), 200
-
-
-@bp.route('/imports/<int:import_id>/citizens/<int:citizen_id>',
+@bp.route('/imports/<int:imp_id>/citizens/<int:ctzn_id>',
           methods=['PATCH'])
-def patch_citizen(import_id, citizen_id):
+def patch_ctzn(imp_id: int, ctzn_id: int):
     db = get_db()
-    data = db.imports.find_one({"data.import_id": import_id})
-    if not data:
+    try:
+        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
+    except TypeError:
         abort(404)
 
-    for citizen in data["citizens"]:
-        if citizen["citizen_id"] == citizen_id:
-            new_data = request.get_json()
-            try:
-                validate(instance=new_data, schema=patch_citizen_schema)
-            except ValidationError:
-                abort(400)
-
-            for rel_id in new_data["relatives"]:
-                ctz = next((ctz for ctz in data["citizens"] if ctz['citizen_id'] == rel_id), None)
-                ctz["relatives"].append(citizen_id)
-
-            citizen.update(new_data)
-            break
-    else:
+    ctzn = get_ctzn(ctzn_id, ctzns)
+    if ctzn is None:
         abort(404)
+
+    new_fields = request.get_json()
+
+    try:
+        validate(instance=new_fields, schema=ctzn_schema)
+
+    except ValidationError:
+        abort(400)
+
+    try:
+        rels = new_fields["relatives"]
+
+        for rel_id in rels:
+            rel = get_ctzn(rel_id, ctzns)
+            rel["relatives"].append(ctzn_id)
+
+    except KeyError:
+        pass
+
+    ctzn.update(new_fields)
 
     db.imports.update_one(
-        {"data": {"import_id": import_id}},
-        {'$set': {"citizens": data["citizens"]}})
+        {"data": {"import_id": imp_id}},
+        {'$set': {"citizens": ctzns}})
 
-    return jsonify({"data": citizen}), 200
+    return jsonify({"data": ctzn}), 200
 
 
-@bp.route('/imports/<int:import_id>/citizens/birthdays', methods=['GET'])
-def get_birthdays(import_id):
+@bp.route('/imports/<int:imp_id>/citizens', methods=['GET'])
+def get_ctzns(imp_id: int):
     db = get_db()
-    data = db.imports.find_one({"data.import_id": import_id})
-    if not data:
+    try:
+        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
+    except TypeError:
         abort(404)
-    months = {}
-    for i in range(1, 13):
-        months[str(i)] = []
 
-    for citizen in data["citizens"]:
-        for rel_id in citizen["relatives"]:
-            ctz = next((ctz for ctz in data["citizens"] if ctz['citizen_id'] == rel_id), None)
-            b_d = int(ctz["birth_date"].split('.')[1])
+    return jsonify({"data": ctzns}), 200
 
-            ctz = next((ctz for ctz in months[str(b_d)] if ctz['citizen_id'] == citizen["citizen_id"]), None)
-            if ctz:
-                ctz["presents"] += 1
-            else:
-                months[str(b_d)].append({"citizen_id": citizen["citizen_id"], "presents": 1})
+
+@bp.route('/imports/<int:imp_id>/citizens/birthdays', methods=['GET'])
+def get_birthdays(imp_id):
+    db = get_db()
+    try:
+        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
+    except TypeError:
+        abort(404)
+
+    months = dict((str(i), []) for i in range(1, 13))
+
+    for ctzn in ctzns:
+        for rel_id in ctzn["relatives"]:
+            rel = get_ctzn(rel_id, ctzns)
+            month = rel["birth_date"].split('.')[1].lstrip("0")
+
+            try:
+                c = get_ctzn(ctzn["citizen_id"], months[month])
+                c["presents"] += 1
+            except TypeError:
+                months[month].append(
+                    {"citizen_id": ctzn["citizen_id"], "presents": 1})
 
     return jsonify({"data": months}), 200
 
