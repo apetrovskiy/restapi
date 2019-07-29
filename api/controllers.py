@@ -48,7 +48,15 @@ def patch_citizen(import_id, citizen_id):
     for citizen in data["citizens"]:
         if citizen["citizen_id"] == citizen_id:
             new_data = request.get_json()
-            # валидация новых данных
+            try:
+                validate(instance=new_data, schema=patch_citizen_schema)
+            except ValidationError:
+                abort(400)
+
+            for rel_id in new_data["relatives"]:
+                ctz = next((ctz for ctz in data["citizens"] if ctz['citizen_id'] == rel_id), None)
+                ctz["relatives"].append(citizen_id)
+
             citizen.update(new_data)
             break
     else:

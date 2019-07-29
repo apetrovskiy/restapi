@@ -65,3 +65,30 @@ def validate_unique_citizen_id(citizen, c_ids):
         raise ValidationError("Уникальный идентификатор жителя")
     else:
         c_ids.append(citizen['citizen_id'])
+
+
+patch_citizen_schema = {
+    "type": "object",
+    "properties": {
+        "citizen_id": {"type": "integer", "minimum": 1},
+        "town": {"type": "string", "minLength": 1},
+        "street": {"type": "string", "minLength": 1},
+        "building": {"type": "string", "minLength": 1},
+        "apartment": {"type": "integer", "minimum": 1},
+        "name": {"type": "string", "minLength": 1},
+        "birth_date": {
+            "type": "string",
+            "pattern": "[0-9]{2}\\.[0-9]{2}\\.[0-9]{4}"
+            },
+        "gender": {
+            "type": "string",
+            "enum": ["male", "female"]
+            },
+        "relatives": {
+            "type": "array",
+            "uniqueItems": True,
+            "items": {"type": "integer", "minimum": 1}
+        }
+    },
+    "additionalProperties": False,
+}
