@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from jsonschema import ValidationError
-
 imp_schema = {
     "type": "object",
     "properties": {
@@ -50,29 +48,6 @@ imp_schema = {
     "required": ["citizens"],
     "additionalProperties": False
 }
-
-
-def get_ctzn(id_: int, ctzns: list):
-    for ctzn in ctzns:
-        if ctzn["citizen_id"] == id_:
-            return ctzn
-
-    return None
-
-
-def validate_relatives(ctzn: dict, ctzns: list):
-    for rel_id in ctzn["relatives"]:
-        rel = get_ctzn(rel_id, ctzns)
-        if ctzn["citizen_id"] not in rel["relatives"]:
-            raise ValidationError("Родственные связи двусторонние")
-
-
-def validate_unique_id(c_id: int, c_ids: set):
-    if c_id in c_ids:
-        raise ValidationError("Уникальный идентификатор жителя")
-    else:
-        c_ids.add(c_id)
-
 
 ctzn_schema = {
     "type": "object",

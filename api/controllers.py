@@ -6,8 +6,7 @@ from flask import Blueprint, request, jsonify, abort
 from jsonschema import validate, ValidationError
 from numpy import percentile
 
-from api.schemas import (
-    ctzn_schema, imp_schema, get_ctzn, validate_relatives, validate_unique_id)
+from api.schemas import ctzn_schema, imp_schema
 from api.db import get_db
 
 
@@ -22,23 +21,31 @@ def post_imp():
     try:
         validate(instance=imp, schema=imp_schema)
 
-        c_ids = set()  # Использованные citizen_id
+        ctzns = {}
         for ctzn in imp["citizens"]:
-            validate_unique_id(ctzn["citizen_id"], c_ids)
-            validate_relatives(ctzn, imp["citizens"])
+            # citizen_id храниться и как ключ, и как значение
+            # запрет на изменение в других местах
+            ctzn_id = ctzn["citizen_id"]
+            if ctzn_id in ctzns.keys():
+                raise ValidationError("Уникальный идентификатор жителя")
+            ctzns[str(ctzn_id)] = ctzn
+
+        for ctzn in ctzns.values():
+            for rel_id in ctzn["relatives"]:
+                rel = ctzns[str(rel_id)]
+                if ctzn["citizen_id"] not in rel["relatives"]:
+                    raise ValidationError("Родственные связи двусторонние")
 
     except ValidationError:
         abort(400)
-    except TypeError:
-        abort(400)
-    except KeyError:
-        abort(400)
 
+    doc = {}
     imp_id = db.imports.count_documents({}) + 1
-    imp["data"] = {"import_id": imp_id}
-    db.imports.insert_one(imp)
+    doc["data"] = {"import_id": imp_id}
+    doc["citizens"] = ctzns
+    db.imports.insert_one(doc)
 
-    return jsonify({"data": imp["data"]}), 201
+    return jsonify({"data": doc["data"]}), 201
 
 
 @bp.route('/imports/<int:imp_id>/citizens/<int:ctzn_id>',
@@ -46,14 +53,13 @@ def post_imp():
 def patch_ctzn(imp_id: int, ctzn_id: int):
     db = get_db()
     try:
-        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
+        ctzns = db.imports.find_one(
+            {"data.import_id": imp_id}
+        )["citizens"]
     except TypeError:
         abort(404)
 
-    ctzn = get_ctzn(ctzn_id, ctzns)
-    if ctzn is None:
-        abort(404)
-
+    ctzn = ctzns[str(ctzn_id)]
     new_fields = request.get_json()
 
     try:
@@ -62,15 +68,11 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
     except ValidationError:
         abort(400)
 
-    try:
+    if new_fields["relatives"]:
         rels = new_fields["relatives"]
 
         for rel_id in rels:
-            rel = get_ctzn(rel_id, ctzns)
-            rel["relatives"].append(ctzn_id)
-
-    except KeyError:
-        pass
+            ctzns[str(rel_id)]["relatives"].append(ctzn_id)
 
     ctzn.update(new_fields)
 
@@ -89,6 +91,8 @@ def get_ctzns(imp_id: int):
     except TypeError:
         abort(404)
 
+    ctzns = list(ctzns.values())
+
     return jsonify({"data": ctzns}), 200
 
 
@@ -100,21 +104,30 @@ def get_birthdays(imp_id: int):
     except TypeError:
         abort(404)
 
-    months = dict((str(i), []) for i in range(1, 13))
+    months = dict((str(i), {}) for i in range(1, 13))
 
-    for ctzn in ctzns:
+    for ctzn in ctzns.values():
         for rel_id in ctzn["relatives"]:
-            rel = get_ctzn(rel_id, ctzns)
+            rel = ctzns[str(rel_id)]
             month = rel["birth_date"].split('.')[1].lstrip("0")
+            ctzn_id = ctzn["citizen_id"]
 
             try:
-                c = get_ctzn(ctzn["citizen_id"], months[month])
+                c = months[month][ctzn_id]
                 c["presents"] += 1
-            except TypeError:
-                months[month].append(
-                    {"citizen_id": ctzn["citizen_id"], "presents": 1})
+            except KeyError:
+                months[month][ctzn_id] = {
+                    "citizen_id": ctzn["citizen_id"], "presents": 1
+                }
 
-    return jsonify({"data": months}), 200
+    outs = dict((str(i), []) for i in range(1, 13))
+
+    i = 1
+    for month in months.values():
+        outs[str(i)] = list(month.values())
+        i += 1
+
+    return jsonify({"data": outs}), 200
 
 
 @bp.route('/imports/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
@@ -127,7 +140,7 @@ def get_age_stat(imp_id: int):
 
     towns = {}
 
-    for ctzn in ctzns:
+    for ctzn in ctzns.values():
         birth_date = datetime.strptime(ctzn["birth_date"].strip(), "%d.%m.%Y")
         today = date.today()
         age = today.year - birth_date.year - int(

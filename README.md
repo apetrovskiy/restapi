@@ -92,7 +92,7 @@ sudo systemctl status restapi
 # Windows: Тесты и сервер для разработки
 
 ```shell
-venv/bin/activate
+venv/Scripts/activate
 set FLASK_APP=api
 set FLASK_ENV=development
 pytest -vv --durations=0
