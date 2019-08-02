@@ -26,8 +26,7 @@ def test_emty_json(client):
     }
 
 
-def test_post_imp_val_rels(client):
-    # Недвусторонние родственные связи
+def test_invalid_rels(client):
     response = client.post(
         '/imports',
         data=json.dumps(
@@ -64,8 +63,7 @@ def test_post_imp_val_rels(client):
     }
 
 
-def test_post_imp_val_date(client):
-    # Неправильный месяц в дате
+def test_invalid_month(client):
     response = client.post(
         '/imports',
         data=json.dumps(
@@ -91,7 +89,44 @@ def test_post_imp_val_date(client):
     }
 
 
-def test_post_imp(client):
+def test_not_unique_ids(client):
+    response = client.post(
+        '/imports',
+        data=json.dumps(
+            {
+                "citizens": [
+                    {
+                        "citizen_id": 1,
+                        "town": "Москва",
+                        "street": "Льва Толстого",
+                        "building": "16к7стр5",
+                        "apartment": 7,
+                        "name": "Иванов Иван Иванович",
+                        "birth_date": " 26.12.1986",
+                        "gender": "male",
+                        "relatives": [2]
+                    },
+                    {
+                        "citizen_id": 1,
+                        "town": "Москва",
+                        "street": "Льва Толстого",
+                        "building": "16к7стр5",
+                        "apartment": 7,
+                        "name": "Иванов Сергей Иванович",
+                        "birth_date": "17.04.1997",
+                        "gender": "male",
+                        "relatives": [1]
+                    }
+                ]
+            }),
+        content_type='application/json')
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request"
+    }
+
+
+def test_expected(client, app):
     response = client.post(
         '/imports',
         data=json.dumps(
@@ -139,69 +174,12 @@ def test_post_imp(client):
             "import_id": 1
         }
     }
-
-
-def test_plain_text_patch(client):
-    test_post_imp(client)
-    response = client.patch(
-        '/imports/1/citizens/3',
-        data="plain text")
-    assert response.status_code == 400
-    assert json.loads(response.data) == {
-        "error": "Bad Request"
-    }
-
-
-def test_json_patch(client):
-    test_post_imp(client)
-    response = client.patch(
-        '/imports/1/citizens/3',
-        data=json.dumps({}),
-        content_type='application/json')
-    assert response.status_code == 400
-    assert json.loads(response.data) == {
-        "error": "Bad Request"
-    }
-
-
-def test_patch_ctzns(client):
-    test_post_imp(client)
-    response = client.patch(
-        '/imports/1/citizens/3',
-        data=json.dumps(
-            {
-                "name": "Иванова Мария Леонидовна",
-                "town": "Москва",
-                "street": "Льва Толстого",
-                "building": "16к7стр5",
-                "apartment": 7,
-                "relatives": [1]
-            }),
-        content_type='application/json')
-    assert response.status_code == 200
-    assert json.loads(response.data) == {
-        "data": {
-            "citizen_id": 3,
-            "town": "Москва",
-            "street": "Льва Толстого",
-            "building": "16к7стр5",
-            "apartment": 7,
-            "name": "Иванова Мария Леонидовна",
-            "birth_date": "23.11.1986",
-            "gender": "female",
-            "relatives": [1]
-        }
-    }
-
-
-def test_get_ctzns(client):
-    test_patch_ctzns(client)
-    response = client.get('/imports/1/citizens')
-    assert response.status_code == 200
-    assert json.loads(response.data) == {
-        "data": [
-            {
-                "citizen_id": 1,
+    with app.app_context():
+        db = get_db()
+        ctzns = db.imports.find_one({"_id": 1})
+        assert ctzns == {
+            "_id": 1,
+            "1": {
                 "town": "Москва",
                 "street": "Льва Толстого",
                 "building": "16к7стр5",
@@ -209,10 +187,9 @@ def test_get_ctzns(client):
                 "name": "Иванов Иван Иванович",
                 "birth_date": " 26.12.1986",
                 "gender": "male",
-                "relatives": [2, 3]
+                "relatives": [2]
             },
-            {
-                "citizen_id": 2,
+            "2": {
                 "town": "Москва",
                 "street": "Льва Толстого",
                 "building": "16к7стр5",
@@ -222,113 +199,14 @@ def test_get_ctzns(client):
                 "gender": "male",
                 "relatives": [1]
             },
-            {
-                "citizen_id": 3,
-                "town": "Москва",
-                "street": "Льва Толстого",
-                "building": "16к7стр5",
-                "apartment": 7,
-                "name": "Иванова Мария Леонидовна",
+            "3": {
+                "town": "Керчь",
+                "street": "Иосифа Бродского",
+                "building": "2",
+                "apartment": 11,
+                "name": "Романова Мария Леонидовна",
                 "birth_date": "23.11.1986",
                 "gender": "female",
-                "relatives": [1]
-            }
-        ]
-    }
-
-
-def test_get_birthdays(client):
-    test_patch_ctzns(client)
-    response = client.get('/imports/1/citizens/birthdays')
-    assert response.status_code == 200
-    assert json.loads(response.data) == {
-        "data": {
-            "1": [],
-            "2": [],
-            "3": [],
-            "4": [{
-                "citizen_id": 1,
-                "presents": 1,
-                 }],
-            "5": [],
-            "6": [],
-            "7": [],
-            "8": [],
-            "9": [],
-            "10": [],
-            "11": [{
-                "citizen_id": 1,
-                "presents": 1
-                  }],
-            "12": [
-                {
-                    "citizen_id": 2,
-                    "presents": 1
-                },
-                {
-                    "citizen_id": 3,
-                    "presents": 1
+                "relatives": []
                 }
-                ]
-            }
         }
-
-
-def test_get_age_stat(client):
-    test_get_birthdays(client)
-    response = client.get('/imports/1/towns/stat/percentile/age')
-    assert response.status_code == 200
-    assert json.loads(response.data) == {
-        "data": [
-            {
-                "town": "Москва",
-                "p50": 32,
-                "p75": 32,
-                "p99": 32
-            }
-        ]
-    }
-
-
-def test_stress_post(client):
-    ctzns = []
-
-    for c_id in range(1, 10001):
-        ctzn = {
-            "citizen_id": c_id,
-            "town": "Керчь",
-            "street": "Иосифа Бродского",
-            "building": "2",
-            "apartment": 11,
-            "name": "Романова Мария Леонидовна",
-            "birth_date": "23.11.1986",
-            "gender": "female",
-            "relatives": [10001-c_id]
-        }
-        ctzns.append(ctzn)
-
-    response = client.post(
-        '/imports',
-        data=json.dumps(
-            {
-                "citizens": ctzns
-            }),
-        content_type='application/json')
-    assert response.status_code == 201
-    assert json.loads(response.data) == {
-        "data": {
-            "import_id": 1
-        }
-    }
-
-
-def test_stress_birthdays(client):
-    test_stress_post(client)
-    response = client.get('/imports/1/citizens/birthdays')
-    assert response.status_code == 200
-
-
-def test_stress_age(client):
-    test_stress_post(client)
-    response = client.get('/imports/1/towns/stat/percentile/age')
-    assert response.status_code == 200

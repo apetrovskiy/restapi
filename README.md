@@ -95,6 +95,8 @@ sudo systemctl status restapi
 venv/Scripts/activate
 set FLASK_APP=api
 set FLASK_ENV=development
-pytest -vv --durations=0
+coverage run -m pytest
+coverage html
+start htmlcov/index.html
 python -m flask run
 ```

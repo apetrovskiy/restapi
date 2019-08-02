@@ -33,7 +33,7 @@ def post_imp():
         for ctzn in imp["citizens"]:
             ctzn_id = ctzn.pop("citizen_id")
 
-            if ctzn_id in ctzns.keys():
+            if str(ctzn_id) in ctzns.keys():
                 raise ValidationError('Уникальный идентификатор жителя')
 
             # mongodb требует ключи str
@@ -69,6 +69,8 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
+    if ctzns is None or not str(ctzn_id) in ctzns:
+        abort(404)
     ctzn = ctzns[str(ctzn_id)]
 
     if "relatives" in new_fields:
@@ -92,6 +94,8 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 def get_ctzns(imp_id: int):
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
+    if ctzns is None:
+        abort(404)
 
     ctzns.pop("_id")
     for ctzn_id, ctzn in ctzns.items():
