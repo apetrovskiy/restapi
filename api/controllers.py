@@ -1,4 +1,14 @@
 # -*- coding: utf-8 -*-
+'''
+Структура базы данных:
+imports/import_id
+{
+    "_id": 1,
+    "1": {"town": ...},
+    "2": {"town": ...},
+    ...
+}
+'''
 
 from datetime import datetime, date
 
@@ -15,60 +25,53 @@ bp = Blueprint('controllers', __name__)
 
 @bp.route('/imports', methods=['POST'])
 def post_imp():
-    db = get_db()
     imp = request.get_json()
-
     try:
         validate(instance=imp, schema=imp_schema)
 
         ctzns = {}
         for ctzn in imp["citizens"]:
-            # citizen_id храниться и как ключ, и как значение
-            # запрет на изменение в других местах
-            ctzn_id = ctzn["citizen_id"]
+            ctzn_id = ctzn.pop("citizen_id")
+
             if ctzn_id in ctzns.keys():
-                raise ValidationError("Уникальный идентификатор жителя")
+                raise ValidationError('Уникальный идентификатор жителя')
+
+            # mongodb требует ключи str
             ctzns[str(ctzn_id)] = ctzn
 
-        for ctzn in ctzns.values():
+        for ctzn_id, ctzn in ctzns.items():
             for rel_id in ctzn["relatives"]:
                 rel = ctzns[str(rel_id)]
-                if ctzn["citizen_id"] not in rel["relatives"]:
+
+                if int(ctzn_id) not in rel["relatives"]:
                     raise ValidationError("Родственные связи двусторонние")
 
     except ValidationError:
         abort(400)
 
-    doc = {}
+    db = get_db()
     imp_id = db.imports.count_documents({}) + 1
-    doc["data"] = {"import_id": imp_id}
-    doc["citizens"] = ctzns
-    db.imports.insert_one(doc)
+    ctzns["_id"] = imp_id
+    db.imports.insert_one(ctzns)
 
-    return jsonify({"data": doc["data"]}), 201
+    return jsonify({"data": {"import_id": imp_id}}), 201
 
 
 @bp.route('/imports/<int:imp_id>/citizens/<int:ctzn_id>',
           methods=['PATCH'])
 def patch_ctzn(imp_id: int, ctzn_id: int):
-    db = get_db()
-    try:
-        ctzns = db.imports.find_one(
-            {"data.import_id": imp_id}
-        )["citizens"]
-    except TypeError:
-        abort(404)
-
-    ctzn = ctzns[str(ctzn_id)]
     new_fields = request.get_json()
-
     try:
         validate(instance=new_fields, schema=ctzn_schema)
 
     except ValidationError:
         abort(400)
 
-    if new_fields["relatives"]:
+    db = get_db()
+    ctzns = db.imports.find_one({"_id": imp_id})
+    ctzn = ctzns[str(ctzn_id)]
+
+    if "relatives" in new_fields:
         rels = new_fields["relatives"]
 
         for rel_id in rels:
@@ -77,8 +80,10 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
     ctzn.update(new_fields)
 
     db.imports.update_one(
-        {"data": {"import_id": imp_id}},
-        {'$set': {"citizens": ctzns}})
+        {"_id": imp_id},
+        {'$set': ctzns})
+
+    ctzn["citizen_id"] = ctzn_id
 
     return jsonify({"data": ctzn}), 200
 
@@ -86,11 +91,11 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 @bp.route('/imports/<int:imp_id>/citizens', methods=['GET'])
 def get_ctzns(imp_id: int):
     db = get_db()
-    try:
-        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
-    except TypeError:
-        abort(404)
+    ctzns = db.imports.find_one({"_id": imp_id})
 
+    ctzns.pop("_id")
+    for ctzn_id, ctzn in ctzns.items():
+        ctzn["citizen_id"] = int(ctzn_id)
     ctzns = list(ctzns.values())
 
     return jsonify({"data": ctzns}), 200
@@ -99,25 +104,23 @@ def get_ctzns(imp_id: int):
 @bp.route('/imports/<int:imp_id>/citizens/birthdays', methods=['GET'])
 def get_birthdays(imp_id: int):
     db = get_db()
-    try:
-        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
-    except TypeError:
+    ctzns = db.imports.find_one({"_id": imp_id})
+    if ctzns is None:
         abort(404)
-
+    ctzns.pop("_id")
     months = dict((str(i), {}) for i in range(1, 13))
 
-    for ctzn in ctzns.values():
+    for ctzn_id, ctzn in ctzns.items():
         for rel_id in ctzn["relatives"]:
             rel = ctzns[str(rel_id)]
             month = rel["birth_date"].split('.')[1].lstrip("0")
-            ctzn_id = ctzn["citizen_id"]
 
             try:
-                c = months[month][ctzn_id]
+                c = months[month][int(ctzn_id)]
                 c["presents"] += 1
             except KeyError:
-                months[month][ctzn_id] = {
-                    "citizen_id": ctzn["citizen_id"], "presents": 1
+                months[month][int(ctzn_id)] = {
+                    "citizen_id": int(ctzn_id), "presents": 1
                 }
 
     outs = dict((str(i), []) for i in range(1, 13))
@@ -133,9 +136,10 @@ def get_birthdays(imp_id: int):
 @bp.route('/imports/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
 def get_age_stat(imp_id: int):
     db = get_db()
-    try:
-        ctzns = db.imports.find_one({"data.import_id": imp_id})["citizens"]
-    except TypeError:
+
+    ctzns = db.imports.find_one({"_id": imp_id})
+    ctzns.pop("_id")
+    if ctzns is None:
         abort(404)
 
     towns = {}
