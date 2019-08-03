@@ -4,7 +4,7 @@ After=network.target
 Requires=mongod.service
 
 [Service]
-User=restapi
+User=entrant
 WorkingDirectory=/home/entrant/restapi
 Environment="PATH=/home/entrant/restapi/venv/bin"
 Environment="MONGO_DB_NAME=prod"
