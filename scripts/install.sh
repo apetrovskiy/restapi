@@ -12,13 +12,13 @@ sudo apt-get install python3.7
 sudo apt-get install virtualenv
 
 virtualenv -p python3.7 ~/restapi/venv
-~/restapi/venv/bin/activate
+. restapi/venv/bin/activate
 python --version
 pip -V
-pip install -e .
+pip install -e ~/restapi
 deactivate
 
-cp ~/restapi/scripts/restapi.service /etc/systemd/system/restapi.service
+sudo cp ~/restapi/scripts/restapi.service /etc/systemd/system/restapi.service
 sudo systemctl start restapi
 sudo systemctl enable restapi
 

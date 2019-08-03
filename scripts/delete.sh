@@ -10,6 +10,7 @@ sudo rm -r ~/restapi/
 
 sudo apt-get purge python3.7
 sudo apt-get purge virtualenv
+sudo apt autoremove
 
 echo --------------------
 echo Done

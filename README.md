@@ -9,7 +9,7 @@
 ```shell
 cd ~
 git clone git@github.com:egorchistov/restapi.git
-~/restapi/scripts/install.sh
+sh ~/restapi/scripts/install.sh
 ```
 
 # Запуск тестов

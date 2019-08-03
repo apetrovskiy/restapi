@@ -1,10 +1,12 @@
 #!/bin/sh
 
 sudo systemctl stop restapi
-git pull restapi
-~/restapi/venv/bin/activate
+cd ~/restapi
+git pull
+. venv/bin/activate
 pip install -e .
 deactivate
+cd ~
 sudo systemctl start restapi
 
 echo --------------------
