@@ -10,13 +10,15 @@ imports/import_id
 }
 '''
 
+import sys
 from datetime import datetime, date
 
 from flask import Blueprint, request, jsonify, abort
-from jsonschema import validate, ValidationError
+import json
+import fastjsonschema
+from fastjsonschema import JsonSchemaException
 from numpy import percentile
 
-from api.schemas import ctzn_schema, imp_schema
 from api.db import get_db
 
 
@@ -27,14 +29,19 @@ bp = Blueprint('controllers', __name__)
 def post_imp():
     imp = request.get_json()
     try:
-        validate(instance=imp, schema=imp_schema)
+        schema = json.load(open('api/schemas/imp.json'))
+        fastjsonschema.validate(schema, imp)
 
         ctzns = {}
+        schema = json.load(open('api/schemas/crt_ctzn.json'))
+        validator = fastjsonschema.compile(schema)
+
         for ctzn in imp["citizens"]:
+            validator(ctzn)
             ctzn_id = ctzn.pop("citizen_id")
 
             if str(ctzn_id) in ctzns.keys():
-                raise ValidationError('Уникальный идентификатор жителя')
+                raise JsonSchemaException('citizen_id\'s are not unique')
 
             # mongodb требует ключи str
             ctzns[str(ctzn_id)] = ctzn
@@ -44,9 +51,10 @@ def post_imp():
                 rel = ctzns[str(rel_id)]
 
                 if int(ctzn_id) not in rel["relatives"]:
-                    raise ValidationError("Родственные связи двусторонние")
+                    raise JsonSchemaException("relatives are not two-way")
 
-    except ValidationError:
+    except JsonSchemaException as ve:
+        sys.stderr.write(str(ve))
         abort(400)
 
     db = get_db()
@@ -62,9 +70,11 @@ def post_imp():
 def patch_ctzn(imp_id: int, ctzn_id: int):
     new_fields = request.get_json()
     try:
-        validate(instance=new_fields, schema=ctzn_schema)
+        schema = json.load(open('api/schemas/upd_ctzn.json'))
+        fastjsonschema.validate(schema, new_fields)
 
-    except ValidationError:
+    except JsonSchemaException as ve:
+        sys.stderr.write(str(ve))
         abort(400)
 
     db = get_db()
