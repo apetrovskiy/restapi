@@ -15,7 +15,8 @@ sh ~/restapi/scripts/install.sh
 # Запуск тестов
 
 ```shell
-~/restapi/venv/bin/activate
+cd ~
+. /restapi/venv/bin/activate
 coverage run -m pytest
 coverage report
 ```
@@ -23,8 +24,9 @@ coverage report
 # Запуск сервера для разработки
 
 ```shell
-~/restapi/venv/bin/activate
-set FLASK_APP=~/restapi/api
-set FLASK_ENV=development
-python -m flask run
+cd ~
+. /restapi/venv/bin/activate
+export FLASK_APP=~/restapi/api
+export FLASK_ENV=development
+python3.7 -m flask run
 ```
