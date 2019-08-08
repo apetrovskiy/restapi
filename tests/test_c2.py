@@ -11,7 +11,8 @@ def test_plain_text(client, post):
         data="plain text")
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "data must be object"
     }
 
 
@@ -22,7 +23,8 @@ def test_empty_json(client, post):
         content_type='application/json')
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "data must contain at least 1 properties"
     }
 
 

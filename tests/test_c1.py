@@ -11,7 +11,8 @@ def test_plain_text(client):
         data="plain text")
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "data must be object"
     }
 
 
@@ -22,7 +23,8 @@ def test_emty_json(client):
         content_type='application/json')
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "data must contain ['citizens'] properties"
     }
 
 
@@ -59,7 +61,8 @@ def test_invalid_rels(client):
         content_type='application/json')
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "citizens relatives are not bidirectional"
     }
 
 
@@ -85,7 +88,8 @@ def test_invalid_month(client):
         content_type='application/json')
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "month must be in 1..12"
     }
 
 
@@ -111,7 +115,8 @@ def test_invalid_date(client):
         content_type='application/json')
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "day is out of range for month"
     }
 
 
@@ -148,7 +153,8 @@ def test_not_unique_ids(client):
         content_type='application/json')
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request"
+        "error": "Bad Request",
+        "description": "citizen_ids are not unique"
     }
 
 

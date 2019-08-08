@@ -62,7 +62,7 @@ def post_imp():
 
     except JsonSchemaException as ve:
         sys.stderr.write(str(ve))
-        abort(400)
+        abort(400, str(ve))
 
     db = get_db()
     imp_id = db.imports.count_documents({}) + 1
@@ -82,7 +82,7 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 
     except JsonSchemaException as ve:
         sys.stderr.write(str(ve))
-        abort(400)
+        abort(400, str(ve))
 
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
@@ -200,7 +200,9 @@ def not_found(error):
 
 @bp.errorhandler(400)
 def bad_request(error):
-    return jsonify({"error": "Bad Request"}), 400
+    response = jsonify(
+        {"error": "Bad Request", "description": error.description})
+    return response, 400
 
 
 @bp.errorhandler(500)
