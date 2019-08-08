@@ -206,6 +206,7 @@ def test_expected(client, app):
         assert ctzns == {
             "_id": 1,
             "1": {
+                "citizen_id": 1,
                 "town": "Москва",
                 "street": "Льва Толстого",
                 "building": "16к7стр5",
@@ -216,6 +217,7 @@ def test_expected(client, app):
                 "relatives": [2]
             },
             "2": {
+                "citizen_id": 2,
                 "town": "Москва",
                 "street": "Льва Толстого",
                 "building": "16к7стр5",
@@ -226,6 +228,7 @@ def test_expected(client, app):
                 "relatives": [1]
             },
             "3": {
+                "citizen_id": 3,
                 "town": "Керчь",
                 "street": "Иосифа Бродского",
                 "building": "2",

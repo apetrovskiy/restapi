@@ -4,8 +4,8 @@
 imports/import_id
 {
     "_id": 1,
-    "1": {"town": ...},
-    "2": {"town": ...},
+    "1": {"citizen_id": 1, "town": ...},
+    "2": {"citizen_id": 2, "town": ...},
     ...
 }
 '''
@@ -38,26 +38,27 @@ def post_imp():
 
         for ctzn in imp["citizens"]:
             validator(ctzn)
-            ctzn_id = ctzn.pop("citizen_id")
+            ctzn_id = ctzn["citizen_id"]
 
             if str(ctzn_id) in ctzns.keys():
-                raise JsonSchemaException('citizen_id\'s are not unique')
+                raise JsonSchemaException('citizen_ids are not unique')
 
-            # mongodb требует ключи str
-            ctzns[str(ctzn_id)] = ctzn
-
+            dd, mm, yyyy = map(int, ctzn["birth_date"].split('.'))
             try:
-                d, m, y = map(int, ctzn["birth_date"].split('.'))
-                date(y, m, d)
+                date(yyyy, mm, dd)
             except ValueError as ve:
                 raise JsonSchemaException(ve)
+
+            ctzns[str(ctzn_id)] = ctzn
 
         for ctzn_id, ctzn in ctzns.items():
             for rel_id in ctzn["relatives"]:
                 rel = ctzns[str(rel_id)]
 
                 if int(ctzn_id) not in rel["relatives"]:
-                    raise JsonSchemaException("relatives are not two-way")
+                    raise JsonSchemaException(
+                        "citizens relatives are not bidirectional"
+                    )
 
     except JsonSchemaException as ve:
         sys.stderr.write(str(ve))
@@ -75,8 +76,8 @@ def post_imp():
           methods=['PATCH'])
 def patch_ctzn(imp_id: int, ctzn_id: int):
     new_fields = request.get_json()
+    schema = json.load(open('api/schemas/upd_ctzn.json'))
     try:
-        schema = json.load(open('api/schemas/upd_ctzn.json'))
         fastjsonschema.validate(schema, new_fields)
 
     except JsonSchemaException as ve:
@@ -85,8 +86,10 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
+
     if ctzns is None or not str(ctzn_id) in ctzns:
         abort(404)
+
     ctzn = ctzns[str(ctzn_id)]
 
     if "relatives" in new_fields:
@@ -101,8 +104,6 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
         {"_id": imp_id},
         {'$set': ctzns})
 
-    ctzn["citizen_id"] = ctzn_id
-
     return jsonify({"data": ctzn}), 200
 
 
@@ -110,12 +111,12 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 def get_ctzns(imp_id: int):
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
+
     if ctzns is None:
         abort(404)
 
     ctzns.pop("_id")
-    for ctzn_id, ctzn in ctzns.items():
-        ctzn["citizen_id"] = int(ctzn_id)
+
     ctzns = list(ctzns.values())
 
     return jsonify({"data": ctzns}), 200
@@ -125,8 +126,10 @@ def get_ctzns(imp_id: int):
 def get_birthdays(imp_id: int):
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
+
     if ctzns is None:
         abort(404)
+
     ctzns.pop("_id")
     months = dict((str(i), {}) for i in range(1, 13))
 
@@ -159,6 +162,7 @@ def get_age_stat(imp_id: int):
 
     ctzns = db.imports.find_one({"_id": imp_id})
     ctzns.pop("_id")
+
     if ctzns is None:
         abort(404)
 

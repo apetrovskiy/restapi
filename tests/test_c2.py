@@ -95,6 +95,7 @@ def test_without_rels(client, post, app):
         db = get_db()
         ctzn = db.imports.find_one({"_id": 1})["3"]
         assert ctzn == {
+            "citizen_id": 3,
             "town": "Москва",
             "street": "Льва Толстого",
             "building": "16к7стр5",
@@ -139,6 +140,7 @@ def test_expected(client, app, post):
 
         ctzn = db.imports.find_one({"_id": 1})["3"]
         assert ctzn == {
+            "citizen_id": 3,
             "town": "Москва",
             "street": "Льва Толстого",
             "building": "16к7стр5",
