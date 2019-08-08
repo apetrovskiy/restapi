@@ -46,6 +46,12 @@ def post_imp():
             # mongodb требует ключи str
             ctzns[str(ctzn_id)] = ctzn
 
+            try:
+                d, m, y = map(int, ctzn["birth_date"].split('.'))
+                date(y, m, d)
+            except ValueError as ve:
+                raise JsonSchemaException(ve)
+
         for ctzn_id, ctzn in ctzns.items():
             for rel_id in ctzn["relatives"]:
                 rel = ctzns[str(rel_id)]

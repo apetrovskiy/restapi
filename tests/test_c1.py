@@ -89,6 +89,32 @@ def test_invalid_month(client):
     }
 
 
+def test_invalid_date(client):
+    response = client.post(
+        '/imports',
+        data=json.dumps(
+            {
+                "citizens": [
+                    {
+                        "citizen_id": 1,
+                        "town": "Москва",
+                        "street": "Льва Толстого",
+                        "building": "16к7стр5",
+                        "apartment": 7,
+                        "name": "Иванов Иван Иванович",
+                        "birth_date": "31.02.1986",
+                        "gender": "male",
+                        "relatives": []
+                    }
+                ]
+            }),
+        content_type='application/json')
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request"
+    }
+
+
 def test_not_unique_ids(client):
     response = client.post(
         '/imports',
