@@ -86,6 +86,7 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
+    ctzns_for_upd = {}
 
     if ctzns is None or not str(ctzn_id) in ctzns:
         abort(404)
@@ -97,12 +98,15 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 
         for rel_id in rels:
             ctzns[str(rel_id)]["relatives"].append(ctzn_id)
+            rel = ctzns[str(rel_id)]
+            ctzns_for_upd[str(rel_id)] = rel
 
     ctzn.update(new_fields)
+    ctzns_for_upd[str(ctzn_id)] = ctzn
 
     db.imports.update_one(
         {"_id": imp_id},
-        {'$set': ctzns})
+        {'$set': ctzns_for_upd})
 
     return jsonify({"data": ctzn}), 200
 

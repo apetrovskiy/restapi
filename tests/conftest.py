@@ -74,7 +74,6 @@ def post(client):
 
 @pytest.fixture
 def post_10000(client):
-    global ctzns
     ctzns = []
 
     for c_id in range(1, 10001):
