@@ -94,12 +94,20 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
     ctzn = ctzns[str(ctzn_id)]
 
     if "relatives" in new_fields:
+        prev_rels = ctzn["relatives"]
         rels = new_fields["relatives"]
 
-        for rel_id in rels:
-            ctzns[str(rel_id)]["relatives"].append(ctzn_id)
-            rel = ctzns[str(rel_id)]
-            ctzns_for_upd[str(rel_id)] = rel
+        rels_add = set(rels) - set(prev_rels)
+        rels_rem = set(prev_rels) - set(rels)
+
+        for rel_id in rels_add.union(rels_rem):
+            ctzns_for_upd[str(rel_id)] = ctzns[str(rel_id)]
+
+        for rel_id in rels_add:
+            ctzns_for_upd[str(rel_id)]["relatives"].append(ctzn_id)
+
+        for rel_id in rels_rem:
+            ctzns_for_upd[str(rel_id)]["relatives"].remove(ctzn_id)
 
     ctzn.update(new_fields)
     ctzns_for_upd[str(ctzn_id)] = ctzn

@@ -152,3 +152,31 @@ def test_expected(client, app, post):
             "gender": "female",
             "relatives": [1]
         }
+
+
+def test_remove_rels(client, app, post):
+    response = client.patch(
+        '/imports/1/citizens/1',
+        data=json.dumps(
+            {
+                "relatives": []
+            }),
+        content_type='application/json')
+    assert response.status_code == 200
+    assert json.loads(response.data) == {
+        "data": {
+            "citizen_id": 1,
+            "town": "Москва",
+            "street": "Льва Толстого",
+            "building": "16к7стр5",
+            "apartment": 7,
+            "name": "Иванов Иван Иванович",
+            "birth_date": " 26.12.1986",
+            "gender": "male",
+            "relatives": []
+        }
+    }
+
+    with app.app_context():
+        db = get_db()
+        assert db.imports.find_one({"_id": 1})["2"]["relatives"] == []
