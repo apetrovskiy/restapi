@@ -72,6 +72,23 @@ def test_nf_citizen(client):
     }
 
 
+def test_invalid_date(client, app, data):
+    response = client.patch(
+        '/imports/1/citizens/3',
+        data=json.dumps(
+            {
+                "birth_date": "31.02.2012",
+            }
+        ),
+        content_type='application/json'
+    )
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request",
+        "description": "day is out of range for month"
+    }
+
+
 def test_without_rels(client, app, data):
     response = client.patch(
         '/imports/1/citizens/3',
@@ -184,3 +201,20 @@ def test_rem_rels(client, app, data):
     with app.app_context():
         db = get_db()
         assert db.imports.find_one({"_id": 1})["3"]["relatives"] == []
+
+
+def test_invalid_rel(client, app, data):
+    response = client.patch(
+        '/imports/1/citizens/3',
+        data=json.dumps(
+            {
+                "relatives": [100]
+            }
+        ),
+        content_type='application/json'
+    )
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request",
+        "description": "citizen '100' doesn't exist"
+    }

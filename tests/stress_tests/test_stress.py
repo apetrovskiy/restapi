@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+    Нагрузочное тестирование
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Тесты проверяют только коды, но не тела ответов.
+"""
 
 import json
 
@@ -6,7 +12,7 @@ from tests.conftest import gen_ctzns
 
 
 def test_c1(client):
-    ctzns = gen_ctzns(10 ** 5)
+    ctzns = gen_ctzns(10 ** 4)
 
     response = client.post(
         '/imports',
@@ -16,11 +22,6 @@ def test_c1(client):
         content_type='application/json'
     )
     assert response.status_code == 201
-    assert json.loads(response.data) == {
-        "data": {
-            "import_id": 1
-        }
-    }
 
 
 def test_c2(client):
@@ -40,19 +41,6 @@ def test_c2(client):
         content_type='application/json'
     )
     assert response.status_code == 200
-    assert json.loads(response.data) == {
-        "data": {
-            "citizen_id": 1000,
-            "town": "Москва",
-            "street": "Льва Толстого",
-            "building": "16к7стр5",
-            "apartment": 7,
-            "name": "Иванова Мария Леонидовна",
-            "birth_date": "12.12.2012",
-            "gender": "female",
-            "relatives": list(range(100, 501))
-        }
-    }
 
 
 def test_c3(client):
