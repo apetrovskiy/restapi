@@ -1,6 +1,15 @@
 {
     "$schema": "http://json-schema.org/schema#",
     "title": "For PATCH controller",
+    "examples": [
+        {
+            "town": "abc",
+            "street": "abc",
+            "birth_date": "12.12.2012",
+            "gender": "male",
+            "relatives": []
+        }
+    ],
     
     "type": "object",
     "properties": {

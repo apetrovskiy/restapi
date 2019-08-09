@@ -1,6 +1,23 @@
 {
     "$schema": "http://json-schema.org/schema#",
     "title": "For POST controller",
+    "examples": [
+        {
+            "citizens": [
+                {
+                    "citizen_id": 1,
+                    "town": "abc",
+                    "street": "abc",
+                    "building": "abc",
+                    "apartment": 7,
+                    "name": "abc abc abc",
+                    "birth_date": "12.12.2012",
+                    "gender": "male",
+                    "relatives": []
+                }
+            ]
+        }
+    ],
 
     "type": "object",
     "properties": {

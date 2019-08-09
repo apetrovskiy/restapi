@@ -1,37 +1,68 @@
 # -*- coding: utf-8 -*-
-'''
-Структура базы данных:
-imports/import_id
-{
-    "_id": 1,
-    "1": {"citizen_id": 1, "town": ...},
-    "2": {"citizen_id": 2, "town": ...},
-    ...
-}
-'''
+"""
+    Обработчики логики
+    ~~~~~~~~~~~~~~~~~~
 
+    .. POST /imports
+        post_imp()
+
+    .. PATCH /imports/$import_id/citizens/$citizen_id
+        patch_ctzn(import_id: int, citizen_id: int)
+
+    .. GET /imports/$import_id/citizens
+        get_ctzns(import_id: int)
+
+    .. GET /imports/$import_id/citizens/birthdays
+        get_birthdays(import_id: int)
+
+    .. GET /imports/$import_id/towns/stat/percentile/age
+        get_age_stat(import_id: int)
+
+
+    Обработчики ошибок
+    ~~~~~~~~~~~~~~~~~~
+
+    .. 400
+        bad_request(error)
+
+    .. 404
+        not_found(error)
+
+    .. 500
+        internal_server_error(error)
+"""
+
+import json
 import sys
 from datetime import datetime, date
 
-from flask import Blueprint, request, jsonify, abort
-import json
 import fastjsonschema
 from fastjsonschema import JsonSchemaException
+from flask import Blueprint, request, jsonify, abort
 from numpy import percentile
 
 from api.db import get_db
-
 
 bp = Blueprint('controllers', __name__)
 
 
 @bp.route('/imports', methods=['POST'])
 def post_imp():
+    """Принимает на вход набор с данными о жителях в формате json и сохраняет
+    его с уникальным идентификатором import_id.
+
+    Валидация:
+    .. Поля - json-схема
+    .. Дата - datetime.date
+    .. ID   - ключи словаря
+    .. Родственники - перебор в цикле
+    """
     imp = request.get_json()
     try:
         schema = json.load(open('api/schemas/imp.json'))
         fastjsonschema.validate(schema, imp)
 
+        # Проверка жителей отдельной схемой в цикле идёт быстрее
         ctzns = {}
         schema = json.load(open('api/schemas/crt_ctzn.json'))
         validator = fastjsonschema.compile(schema)
@@ -75,10 +106,29 @@ def post_imp():
 @bp.route('/imports/<int:imp_id>/citizens/<int:ctzn_id>',
           methods=['PATCH'])
 def patch_ctzn(imp_id: int, ctzn_id: int):
+    """Изменяет информацию о жителе в указанном наборе данных.
+
+    Валидация:
+    .. Поля - json-схема
+    .. Дата - datetime.date
+    .. Родственники - перебор в цикле
+
+    Жители, данные которых изменились, перезаписываются полностью.
+
+    Для связей вычисляются удаляемые и добавляемые.
+    Изменение происходит перебором в цикле.
+    """
     new_fields = request.get_json()
     schema = json.load(open('api/schemas/upd_ctzn.json'))
     try:
         fastjsonschema.validate(schema, new_fields)
+
+        if "birth_date" in new_fields:
+            dd, mm, yyyy = map(int, new_fields["birth_date"].split('.'))
+            try:
+                date(yyyy, mm, dd)
+            except ValueError as ve:
+                raise JsonSchemaException(ve)
 
     except JsonSchemaException as ve:
         sys.stderr.write(str(ve))
@@ -101,7 +151,11 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
         rels_rem = set(prev_rels) - set(rels)
 
         for rel_id in rels_add.union(rels_rem):
-            ctzns_for_upd[str(rel_id)] = ctzns[str(rel_id)]
+            try:
+                ctzns_for_upd[str(rel_id)] = ctzns[str(rel_id)]
+            except KeyError as ve:
+                sys.stderr.write(str(ve))
+                abort(400, 'citizen {} doesn\'t exist'.format(str(ve)))
 
         for rel_id in rels_add:
             ctzns_for_upd[str(rel_id)]["relatives"].append(ctzn_id)
@@ -121,6 +175,9 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
 
 @bp.route('/imports/<int:imp_id>/citizens', methods=['GET'])
 def get_ctzns(imp_id: int):
+    """Возвращает список всех жителей для указанного набора данных.
+
+    """
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
 
@@ -136,6 +193,12 @@ def get_ctzns(imp_id: int):
 
 @bp.route('/imports/<int:imp_id>/citizens/birthdays', methods=['GET'])
 def get_birthdays(imp_id: int):
+    """Возвращает жителей и количество подарков, которые они будут покупать
+    своим ближайшим родственникам (1-го порядка), сгруппированных по месяцам
+    из указанного набора данных.
+
+    Поиск перебором в цикле.
+    """
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
 
@@ -170,14 +233,27 @@ def get_birthdays(imp_id: int):
 
 @bp.route('/imports/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
 def get_age_stat(imp_id: int):
+    """Возвращает статистику по городам для указанного набора данных в разрезе
+    возраста (полных лет) жителей: p50, p75, p99, где число - это значение
+    перцентиля.
+
+    Для даты удаляются ведущие и завершающие пробелы.
+
+    Колличество полных лет расчитывается по формуле:
+    age = today.year - birth_date.year - int(
+        (today.month, today.day) < (birth_date.month, birth_date.day)
+    )
+    Условие в скобках либо вычитает год, если дня рождения ещё не было,
+    либо не делает ничего, если день рождения уже был.
+    """
     db = get_db()
 
     ctzns = db.imports.find_one({"_id": imp_id})
-    ctzns.pop("_id")
 
     if ctzns is None:
         abort(404)
 
+    ctzns.pop("_id")
     towns = {}
 
     for ctzn in ctzns.values():
@@ -205,16 +281,19 @@ def get_age_stat(imp_id: int):
     return jsonify({"data": stats}), 200
 
 
-@bp.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Not found"}), 404
-
-
 @bp.errorhandler(400)
 def bad_request(error):
+    """abort(400, description: str)
+
+    """
     response = jsonify(
         {"error": "Bad Request", "description": error.description})
     return response, 400
+
+
+@bp.errorhandler(404)
+def not_found(error):
+    return jsonify({"error": "Not found"}), 404
 
 
 @bp.errorhandler(500)

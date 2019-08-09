@@ -1,7 +1,30 @@
 # -*- coding: utf-8 -*-
+"""
+    Структура db.imports
+    ~~~~~~~~~~~~~~~~~~~~
 
-from pymongo import MongoClient
+    [
+        {
+            "_id": 1,  // import_id
+            "1": {"citizen_id": 1, "town": ...},
+            "2": {"citizen_id": 2, "town": ...},
+            ...
+        },
+        ...
+    ]
+
+    Хранение жителей в словаре увеличивает скорость доступа к отдельному
+    жителю, но затрудняет вывод всех жителей сразу.
+
+
+    Функции
+    ~~~~~~~
+
+    .. get_db()
+"""
+
 import click
+from pymongo import MongoClient
 from flask import current_app, g
 from flask.cli import with_appcontext
 
