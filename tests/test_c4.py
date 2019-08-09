@@ -3,15 +3,15 @@
 import json
 
 
-def test_no_import(client, post):
-    response = client.get('/imports/2/citizens')
+def test_nf_import(client):
+    response = client.get('/imports/100/citizens')
     assert response.status_code == 404
     assert json.loads(response.data) == {
         "error": "Not found"
     }
 
 
-def test_expected(client, post):
+def test_expected(client, data):
     response = client.get('/imports/1/citizens/birthdays')
     assert response.status_code == 200
     assert json.loads(response.data) == {
@@ -19,10 +19,7 @@ def test_expected(client, post):
             "1": [],
             "2": [],
             "3": [],
-            "4": [{
-                "citizen_id": 1,
-                "presents": 1,
-                 }],
+            "4": [],
             "5": [],
             "6": [],
             "7": [],
@@ -30,9 +27,15 @@ def test_expected(client, post):
             "9": [],
             "10": [],
             "11": [],
-            "12": [{
-                    "citizen_id": 2,
-                    "presents": 1
-                }]
+            "12": [
+                    {
+                        "citizen_id": 1,
+                        "presents": 1
+                    },
+                    {
+                        "citizen_id": 3,
+                        "presents": 1
+                    }
+                ]
             }
         }

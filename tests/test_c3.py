@@ -3,51 +3,51 @@
 import json
 
 
-def test_no_import(client, post):
-    response = client.get('/imports/2/citizens')
+def test_nf_import(client):
+    response = client.get('/imports/100/citizens')
     assert response.status_code == 404
     assert json.loads(response.data) == {
         "error": "Not found"
     }
 
 
-def test_expected(client, post):
+def test_expected(client, data):
     response = client.get('/imports/1/citizens')
     assert response.status_code == 200
     assert json.loads(response.data) == {
         "data": [
             {
                 "citizen_id": 1,
-                "town": "Москва",
-                "street": "Льва Толстого",
-                "building": "16к7стр5",
-                "apartment": 7,
-                "name": "Иванов Иван Иванович",
-                "birth_date": " 26.12.1986",
+                "town": "abc",
+                "street": "abc",
+                "building": "abc",
+                "apartment": 1,
+                "name": "abc",
+                "birth_date": "12.12.2012",
                 "gender": "male",
-                "relatives": [2]
+                "relatives": [3]
             },
             {
                 "citizen_id": 2,
-                "town": "Москва",
-                "street": "Льва Толстого",
-                "building": "16к7стр5",
-                "apartment": 7,
-                "name": "Иванов Сергей Иванович",
-                "birth_date": "17.04.1997",
+                "town": "abc",
+                "street": "abc",
+                "building": "abc",
+                "apartment": 1,
+                "name": "abc",
+                "birth_date": "12.12.2012",
                 "gender": "male",
-                "relatives": [1]
+                "relatives": []
             },
             {
                 "citizen_id": 3,
-                "town": "Керчь",
-                "street": "Иосифа Бродского",
-                "building": "2",
-                "apartment": 11,
-                "name": "Романова Мария Леонидовна",
-                "birth_date": "23.11.1986",
-                "gender": "female",
-                "relatives": []
-                }
+                "town": "abc",
+                "street": "abc",
+                "building": "abc",
+                "apartment": 1,
+                "name": "abc",
+                "birth_date": "12.12.2012",
+                "gender": "male",
+                "relatives": [1]
+            }
         ]
     }

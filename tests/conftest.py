@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+import random
 import json
 
 from api import create_app
 from api.db import drop_db
 
 
-@pytest.fixture
+@pytest.fixture()
 def app():
     app = create_app()
     app.config.from_mapping({
@@ -21,79 +22,53 @@ def app():
     yield app
 
 
-@pytest.fixture
+@pytest.fixture()
 def client(app):
     return app.test_client()
 
 
-@pytest.fixture
-def post(client):
-    client.post(
-        '/imports',
-        data=json.dumps(
-            {
-                "citizens": [
-                    {
-                        "citizen_id": 1,
-                        "town": "Москва",
-                        "street": "Льва Толстого",
-                        "building": "16к7стр5",
-                        "apartment": 7,
-                        "name": "Иванов Иван Иванович",
-                        "birth_date": " 26.12.1986",
-                        "gender": "male",
-                        "relatives": [2]
-                    },
-                    {
-                        "citizen_id": 2,
-                        "town": "Москва",
-                        "street": "Льва Толстого",
-                        "building": "16к7стр5",
-                        "apartment": 7,
-                        "name": "Иванов Сергей Иванович",
-                        "birth_date": "17.04.1997",
-                        "gender": "male",
-                        "relatives": [1]
-                    },
-                    {
-                        "citizen_id": 3,
-                        "town": "Керчь",
-                        "street": "Иосифа Бродского",
-                        "building": "2",
-                        "apartment": 11,
-                        "name": "Романова Мария Леонидовна",
-                        "birth_date": "23.11.1986",
-                        "gender": "female",
-                        "relatives": []
-                    }
-                ]
-            }),
-        content_type='application/json'
-    )
+@pytest.fixture()
+def runner(app):
+    return app.test_cli_runner()
 
 
-@pytest.fixture
-def post_10000(client):
+def gen_ctzns(n):
     ctzns = []
 
-    for c_id in range(1, 10001):
+    if n > 10:
+        n_rels = n // 5
+    else:
+        n_rels = n
+
+    for c_id in range(1, n + 1):
         ctzn = {
             "citizen_id": c_id,
-            "town": "Керчь",
-            "street": "Иосифа Бродского",
-            "building": "2",
-            "apartment": 11,
-            "name": "Романова Мария Леонидовна",
-            "birth_date": "23.11.1986",
-            "gender": "female",
-            "relatives": [10001-c_id]
+            "town": "abc",
+            "street": "abc",
+            "building": "abc",
+            "apartment": 1,
+            "name": "abc",
+            "birth_date": "12.12.2012",
+            "gender": "male",
+            "relatives": []
         }
         ctzns.append(ctzn)
 
+    for c_id in range(1, n_rels + 1):
+        if n_rels + 1 == 2 * c_id:
+            continue
+        ctzns[c_id-1]["relatives"] = [n_rels + 1 - c_id]
+
+    return ctzns
+
+
+@pytest.fixture()
+def data(client):
     client.post(
         '/imports',
         data=json.dumps(
             {
-                "citizens": ctzns
+                "citizens": gen_ctzns(3)
             }),
-        content_type='application/json')
+        content_type='application/json'
+    )

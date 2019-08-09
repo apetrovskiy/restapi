@@ -5,10 +5,11 @@ import json
 from api.db import get_db
 
 
-def test_plain_text(client, post):
+def test_not_json(client, data):
     response = client.patch(
         '/imports/1/citizens/3',
-        data="plain text")
+        data="text"
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -16,11 +17,12 @@ def test_plain_text(client, post):
     }
 
 
-def test_empty_json(client, post):
+def test_empty_json(client, data):
     response = client.patch(
         '/imports/1/citizens/3',
         data=json.dumps({}),
-        content_type='application/json')
+        content_type='application/json'
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -28,9 +30,9 @@ def test_empty_json(client, post):
     }
 
 
-def test_no_import(client, post):
+def test_nf_import(client):
     response = client.patch(
-        '/imports/2/citizens/3',
+        '/imports/100/citizens/3',
         data=json.dumps(
             {
                 "name": "Иванова Мария Леонидовна",
@@ -39,17 +41,19 @@ def test_no_import(client, post):
                 "building": "16к7стр5",
                 "apartment": 7,
                 "relatives": [1]
-            }),
-        content_type='application/json')
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 404
     assert json.loads(response.data) == {
         "error": "Not found"
     }
 
 
-def test_no_citizen(client, post):
+def test_nf_citizen(client):
     response = client.patch(
-        '/imports/1/citizens/4',
+        '/imports/1/citizens/100',
         data=json.dumps(
             {
                 "name": "Иванова Мария Леонидовна",
@@ -58,39 +62,38 @@ def test_no_citizen(client, post):
                 "building": "16к7стр5",
                 "apartment": 7,
                 "relatives": [1]
-            }),
-        content_type='application/json')
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 404
     assert json.loads(response.data) == {
         "error": "Not found"
     }
 
 
-def test_without_rels(client, post, app):
+def test_without_rels(client, app, data):
     response = client.patch(
         '/imports/1/citizens/3',
         data=json.dumps(
             {
-                "name": "Иванова Мария Леонидовна",
-                "town": "Москва",
-                "street": "Льва Толстого",
-                "building": "16к7стр5",
-                "apartment": 7,
-                "relatives": []
-            }),
-        content_type='application/json')
+                "gender": "male"
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 200
     assert json.loads(response.data) == {
         "data": {
             "citizen_id": 3,
-            "town": "Москва",
-            "street": "Льва Толстого",
-            "building": "16к7стр5",
-            "apartment": 7,
-            "name": "Иванова Мария Леонидовна",
-            "birth_date": "23.11.1986",
-            "gender": "female",
-            "relatives": []
+            "town": "abc",
+            "street": "abc",
+            "building": "abc",
+            "apartment": 1,
+            "name": "abc",
+            "gender": "male",
+            "birth_date": "12.12.2012",
+            "relatives": [1]
         }
     }
     with app.app_context():
@@ -98,80 +101,81 @@ def test_without_rels(client, post, app):
         ctzn = db.imports.find_one({"_id": 1})["3"]
         assert ctzn == {
             "citizen_id": 3,
-            "town": "Москва",
-            "street": "Льва Толстого",
-            "building": "16к7стр5",
-            "apartment": 7,
-            "name": "Иванова Мария Леонидовна",
-            "birth_date": "23.11.1986",
-            "gender": "female",
-            "relatives": []
+            "town": "abc",
+            "street": "abc",
+            "building": "abc",
+            "apartment": 1,
+            "name": "abc",
+            "gender": "male",
+            "birth_date": "12.12.2012",
+            "relatives": [1]
         }
 
 
-def test_expected(client, app, post):
+def test_add_rels(client, app, data):
     response = client.patch(
         '/imports/1/citizens/3',
         data=json.dumps(
             {
-                "name": "Иванова Мария Леонидовна",
-                "town": "Москва",
-                "street": "Льва Толстого",
-                "building": "16к7стр5",
-                "apartment": 7,
-                "relatives": [1]
-            }),
-        content_type='application/json')
+                "relatives": [1, 2],
+                "gender": "female"
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 200
     assert json.loads(response.data) == {
         "data": {
             "citizen_id": 3,
-            "town": "Москва",
-            "street": "Льва Толстого",
-            "building": "16к7стр5",
-            "apartment": 7,
-            "name": "Иванова Мария Леонидовна",
-            "birth_date": "23.11.1986",
+            "town": "abc",
+            "street": "abc",
+            "building": "abc",
+            "apartment": 1,
+            "name": "abc",
             "gender": "female",
-            "relatives": [1]
+            "birth_date": "12.12.2012",
+            "relatives": [1, 2]
         }
     }
     with app.app_context():
         db = get_db()
-        assert db.imports.find_one({"_id": 1})["1"]["relatives"] == [2, 3]
+        assert db.imports.find_one({"_id": 1})["2"]["relatives"] == [3]
 
         ctzn = db.imports.find_one({"_id": 1})["3"]
         assert ctzn == {
             "citizen_id": 3,
-            "town": "Москва",
-            "street": "Льва Толстого",
-            "building": "16к7стр5",
-            "apartment": 7,
-            "name": "Иванова Мария Леонидовна",
-            "birth_date": "23.11.1986",
+            "town": "abc",
+            "street": "abc",
+            "building": "abc",
+            "apartment": 1,
+            "name": "abc",
             "gender": "female",
-            "relatives": [1]
+            "birth_date": "12.12.2012",
+            "relatives": [1, 2]
         }
 
 
-def test_remove_rels(client, app, post):
+def test_rem_rels(client, app, data):
     response = client.patch(
         '/imports/1/citizens/1',
         data=json.dumps(
             {
-                "relatives": []
-            }),
-        content_type='application/json')
+                "relatives": [],
+                "gender": "male"
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 200
     assert json.loads(response.data) == {
         "data": {
             "citizen_id": 1,
-            "town": "Москва",
-            "street": "Льва Толстого",
-            "building": "16к7стр5",
-            "apartment": 7,
-            "name": "Иванов Иван Иванович",
-            "birth_date": " 26.12.1986",
+            "town": "abc",
+            "street": "abc",
+            "building": "abc",
+            "apartment": 1,
+            "name": "abc",
+            "birth_date": "12.12.2012",
             "gender": "male",
             "relatives": []
         }
@@ -179,4 +183,4 @@ def test_remove_rels(client, app, post):
 
     with app.app_context():
         db = get_db()
-        assert db.imports.find_one({"_id": 1})["2"]["relatives"] == []
+        assert db.imports.find_one({"_id": 1})["3"]["relatives"] == []

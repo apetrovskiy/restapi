@@ -5,10 +5,11 @@ import json
 from api.db import get_db
 
 
-def test_plain_text(client):
+def test_not_json(client):
     response = client.post(
         '/imports',
-        data="plain text")
+        data="text"
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -20,7 +21,8 @@ def test_emty_json(client):
     response = client.post(
         '/imports',
         data=json.dumps({}),
-        content_type='application/json')
+        content_type='application/json'
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -57,8 +59,10 @@ def test_invalid_rels(client):
                         "relatives": [1]
                     }
                 ]
-            }),
-        content_type='application/json')
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -84,8 +88,10 @@ def test_invalid_month(client):
                         "relatives": []
                     }
                 ]
-            }),
-        content_type='application/json')
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -93,7 +99,7 @@ def test_invalid_month(client):
     }
 
 
-def test_invalid_date(client):
+def test_invalid_day(client):
     response = client.post(
         '/imports',
         data=json.dumps(
@@ -111,8 +117,10 @@ def test_invalid_date(client):
                         "relatives": []
                     }
                 ]
-            }),
-        content_type='application/json')
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -149,8 +157,10 @@ def test_not_unique_ids(client):
                         "relatives": [1]
                     }
                 ]
-            }),
-        content_type='application/json')
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
@@ -198,8 +208,10 @@ def test_expected(client, app):
                         "relatives": []
                         }
                 ]
-            }),
-        content_type='application/json')
+            }
+        ),
+        content_type='application/json'
+    )
     assert response.status_code == 201
     assert json.loads(response.data) == {
         "data": {
@@ -243,5 +255,5 @@ def test_expected(client, app):
                 "birth_date": "23.11.1986",
                 "gender": "female",
                 "relatives": []
-                }
+            }
         }

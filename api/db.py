@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from pymongo import MongoClient
 import click
 from flask import current_app, g
@@ -21,13 +23,14 @@ def close_db(e=None):
 def drop_db():
     db = get_db()  # Добавляет client в g
     g.client.drop_database(current_app.config['MONGO_DB_NAME'])
+    close_db()
 
 
 @click.command('drop-db')
 @with_appcontext
 def drop_db_command():
     drop_db()
-    click.echo('База данных очищена.')
+    click.echo('Done.')
 
 
 def init_app(app):
