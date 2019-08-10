@@ -23,17 +23,11 @@
     ~~~~~~~~~~~~~~~~~~
 
     .. 400
-        bad_request(error)
+        bad_request(ex)
 
-    .. 404
-        not_found(error)
-
-    .. 500
-        internal_server_error(error)
 """
 
 import json
-import sys
 from datetime import datetime, date
 
 import fastjsonschema
@@ -92,7 +86,6 @@ def post_imp():
                     )
 
     except JsonSchemaException as ve:
-        sys.stderr.write(str(ve))
         abort(400, str(ve))
 
     db = get_db()
@@ -131,15 +124,16 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
                 raise JsonSchemaException(ve)
 
     except JsonSchemaException as ve:
-        sys.stderr.write(str(ve))
         abort(400, str(ve))
 
     db = get_db()
     ctzns = db.imports.find_one({"_id": imp_id})
     ctzns_for_upd = {}
 
-    if ctzns is None or not str(ctzn_id) in ctzns:
-        abort(404)
+    if ctzns is None:
+        abort(404, 'import doesn\'t exist')
+    if not str(ctzn_id) in ctzns:
+        abort(404, 'citizen doesn\'t exist')
 
     ctzn = ctzns[str(ctzn_id)]
 
@@ -154,8 +148,7 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
             try:
                 ctzns_for_upd[str(rel_id)] = ctzns[str(rel_id)]
             except KeyError as ve:
-                sys.stderr.write(str(ve))
-                abort(400, 'citizen {} doesn\'t exist'.format(str(ve)))
+                abort(400, 'relative {} doesn\'t exist'.format(str(ve)))
 
         for rel_id in rels_add:
             ctzns_for_upd[str(rel_id)]["relatives"].append(ctzn_id)
@@ -182,7 +175,7 @@ def get_ctzns(imp_id: int):
     ctzns = db.imports.find_one({"_id": imp_id})
 
     if ctzns is None:
-        abort(404)
+        abort(404, 'import doesn\'t exist')
 
     ctzns.pop("_id")
 
@@ -203,7 +196,7 @@ def get_birthdays(imp_id: int):
     ctzns = db.imports.find_one({"_id": imp_id})
 
     if ctzns is None:
-        abort(404)
+        abort(404, 'import doesn\'t exist')
 
     ctzns.pop("_id")
     months = dict((str(i), {}) for i in range(1, 13))
@@ -251,7 +244,7 @@ def get_age_stat(imp_id: int):
     ctzns = db.imports.find_one({"_id": imp_id})
 
     if ctzns is None:
-        abort(404)
+        abort(404, 'import doesn\'t exist')
 
     ctzns.pop("_id")
     towns = {}
@@ -282,20 +275,6 @@ def get_age_stat(imp_id: int):
 
 
 @bp.errorhandler(400)
-def bad_request(error):
-    """abort(400, description: str)
+def bad_request(ex):
 
-    """
-    response = jsonify(
-        {"error": "Bad Request", "description": error.description})
-    return response, 400
-
-
-@bp.errorhandler(404)
-def not_found(error):
-    return jsonify({"error": "Not found"}), 404
-
-
-@bp.errorhandler(500)
-def internal_server_error(error):
-    return jsonify({"error": "Internal Server Error"}), 500
+    return jsonify(error="Bad Request", description=ex.description), ex.code

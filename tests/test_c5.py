@@ -3,11 +3,12 @@
 import json
 
 
-def test_nf_import(client):
-    response = client.get('/imports/1/towns/stat/percentile/age')
+def test_nf_import(client, data):
+    response = client.get('/imports/100/towns/stat/percentile/age')
     assert response.status_code == 404
     assert json.loads(response.data) == {
-        "error": "Not found"
+        "error": "Not Found",
+        "description": "import doesn't exist"
     }
 
 

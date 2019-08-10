@@ -30,7 +30,7 @@ def test_empty_json(client, data):
     }
 
 
-def test_nf_import(client):
+def test_nf_import(client, data):
     response = client.patch(
         '/imports/100/citizens/3',
         data=json.dumps(
@@ -47,11 +47,12 @@ def test_nf_import(client):
     )
     assert response.status_code == 404
     assert json.loads(response.data) == {
-        "error": "Not found"
+        "error": "Not Found",
+        "description": "import doesn't exist"
     }
 
 
-def test_nf_citizen(client):
+def test_nf_citizen(client, data):
     response = client.patch(
         '/imports/1/citizens/100',
         data=json.dumps(
@@ -68,7 +69,8 @@ def test_nf_citizen(client):
     )
     assert response.status_code == 404
     assert json.loads(response.data) == {
-        "error": "Not found"
+        "error": "Not Found",
+        "description": "citizen doesn't exist"
     }
 
 
@@ -208,7 +210,7 @@ def test_invalid_rel(client, app, data):
         '/imports/1/citizens/3',
         data=json.dumps(
             {
-                "relatives": [100]
+                "relatives": [100, 101]
             }
         ),
         content_type='application/json'
@@ -216,5 +218,5 @@ def test_invalid_rel(client, app, data):
     assert response.status_code == 400
     assert json.loads(response.data) == {
         "error": "Bad Request",
-        "description": "citizen '100' doesn't exist"
+        "description": "relative '100' doesn't exist"
     }

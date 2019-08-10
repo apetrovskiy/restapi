@@ -2,6 +2,7 @@ venv/
 
 *.pyc
 __pycache__/
+teststemp/
 
 .pytest_cache/
 .coverage
@@ -10,3 +11,5 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+logs/
