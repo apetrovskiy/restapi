@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+import os
 
 
 def test_500(client):
@@ -10,5 +11,5 @@ def test_500(client):
         "error": "Internal Server Error"
     }
 
-    with open('teststemp/logs/api.log', 'r') as log:
+    with open(os.environ["LOGS_DIR"] + 'api.log', 'r') as log:
         assert "ZeroDivisionError: some text" in log.read()

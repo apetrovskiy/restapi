@@ -8,6 +8,8 @@
 """
 
 import pytest
+import os
+import tempfile
 
 from api import create_app
 from api.db import drop_db
@@ -15,6 +17,7 @@ from api.db import drop_db
 
 @pytest.fixture(scope="module")
 def app():
+    os.environ["LOGS_DIR"] = tempfile.mkdtemp()
     app = create_app()
     app.config.from_mapping({
         'TESTING': True,

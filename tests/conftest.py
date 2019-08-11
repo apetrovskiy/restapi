@@ -16,6 +16,8 @@
 import pytest
 import random
 import json
+import os
+import tempfile
 
 from api import create_app
 from api.db import drop_db
@@ -23,11 +25,16 @@ from api.db import drop_db
 
 @pytest.fixture()
 def app():
+    os.environ["LOGS_DIR"] = tempfile.mkdtemp()
     app = create_app()
     app.config.from_mapping({
         'TESTING': True,
         'MONGO_DB_NAME': 'test'
     })
+
+    @app.route('/exc')
+    def raise_exc():
+        raise ZeroDivisionError("some text")
 
     with app.app_context():
         drop_db()
