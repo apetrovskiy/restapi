@@ -16,8 +16,12 @@
         Схемы для валидации данных в обработчиках
 
 
-    Переменные окружения
-    ~~~~~~~~~~~~~~~~~~~~
+    Конфигурирование
+    ~~~~~~~~~~~~~~~~
+
+    Укажите путь к файлу конфигурирования в переменной окружения RESTAPI_SETTINGS
+
+    Доступные настройки:
 
     .. MONGO_URI
         uri для подключения к mongodb
@@ -31,7 +35,7 @@
     Функции
     ~~~~~~~
 
-    .. create_app()
+    .. create_app(config: dict=None)
         Инициализирует поток приложения
 """
 
@@ -43,18 +47,23 @@ import traceback
 from flask import Flask, jsonify
 
 
-def create_app():
+def create_app(config=None):
     app = Flask(__name__)
-    app.config.from_mapping(
-        MONGO_URI=os.environ.get("MONGO_URI", "mongodb://localhost:27017/"),
-        MONGO_DB_NAME=os.environ.get("MONGO_DB_NAME", "dev"),
-        LOGS_DIR=os.environ.get("LOGS_DIR", "logs/")
-    )
+
+    if config is None:
+        app.config.from_mapping(
+            MONGO_URI="mongodb://localhost:27017/",
+            MONGO_DB_NAME="dev",
+            LOGS_DIR="logs"
+        )
+        app.config.from_envvar('RESTAPI_SETTINGS', silent=True)
+    else:
+        app.config.from_mapping(config)
 
     if not os.path.exists(app.config['LOGS_DIR']):
         os.makedirs(app.config['LOGS_DIR'])
 
-    file_handler = logging.FileHandler(app.config['LOGS_DIR'] + 'api.log')
+    file_handler = logging.FileHandler(app.config['LOGS_DIR'] + '/api.log')
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s:\n%(message)s"
     )

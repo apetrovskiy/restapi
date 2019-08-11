@@ -8,7 +8,6 @@
 """
 
 import pytest
-import os
 import tempfile
 
 from api import create_app
@@ -17,11 +16,11 @@ from api.db import drop_db
 
 @pytest.fixture(scope="module")
 def app():
-    os.environ["LOGS_DIR"] = tempfile.mkdtemp()
-    app = create_app()
-    app.config.from_mapping({
+    app = create_app(config={
         'TESTING': True,
-        'MONGO_DB_NAME': 'test'
+        'MONGO_URI': 'mongodb://localhost:27017/',
+        'MONGO_DB_NAME': 'test',
+        'LOGS_DIR': tempfile.mkdtemp()
     })
 
     with app.app_context():
