@@ -266,9 +266,10 @@ def get_age_stat(imp_id: int):
     for town in towns:
         stat = {}
         stat["town"] = town
-        stat["p50"] = percentile(towns[town], 50, interpolation='linear')
-        stat["p75"] = percentile(towns[town], 75, interpolation='linear')
-        stat["p99"] = percentile(towns[town], 99, interpolation='linear')
+        for pv in (50, 75, 99):
+            stat["p" + str(pv)] = round(
+                percentile(towns[town], pv, interpolation='linear'), 2
+            )
         stats.append(stat)
 
     return jsonify({"data": stats}), 200
