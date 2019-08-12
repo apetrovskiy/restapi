@@ -10,57 +10,17 @@
             "relatives": []
         }
     ],
-
-    "definitions": {
-        "citizen_id": {
-            "type": "integer",
-            "minimum": 0
-        },
-        "town": {
-            "type": "string",
-            "minLength": 1
-        },
-        "street": {
-            "type": "string",
-            "minLength": 1
-        },
-        "building": {
-            "type": "string",
-            "minLength": 1
-        },
-        "apartment": {
-            "type": "integer",
-            "minimum": 0
-        },
-        "name": {
-            "type": "string",
-            "minLength": 1
-        },
-        "birth_date": {
-            "type": "string",
-            "pattern": "[0-9]{2}\\.[0-9]{2}\\.[0-9]{4}"
-        },
-        "gender": {
-            "type": "string",
-            "enum": ["male", "female"]
-        },
-        "relatives": {
-            "type": "array",
-            "uniqueItems": true,
-            "items": { "$ref": "#/definitions/citizen_id" }
-        }
-    },
     
     "type": "object",
     "properties": {
-        "town": { "$ref": "#/definitions/town" },
-        "street": { "$ref": "#/definitions/street" },
-        "building": { "$ref": "#/definitions/building" },
-        "apartment": { "$ref": "#/definitions/apartment" },
-        "name": { "$ref": "#/definitions/name" },
-        "birth_date": { "$ref": "#/definitions/birth_date" },
-        "gender": { "$ref": "#/definitions/gender" },
-        "relatives": { "$ref": "#/definitions/relatives" }
+        "town": { "$ref": "fields.json#/definitions/town" },
+        "street": { "$ref": "fields.json#/definitions/street" },
+        "building": { "$ref": "fields.json#/definitions/building" },
+        "apartment": { "$ref": "fields.json#/definitions/apartment" },
+        "name": { "$ref": "fields.json#/definitions/name" },
+        "birth_date": { "$ref": "fields.json#/definitions/birth_date" },
+        "gender": { "$ref": "fields.json#/definitions/gender" },
+        "relatives": { "$ref": "fields.json#/definitions/relatives" }
     },
     "additionalProperties": false,
     "minProperties": 1

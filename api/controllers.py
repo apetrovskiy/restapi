@@ -39,6 +39,11 @@ from api.db import get_db
 
 bp = Blueprint('controllers', __name__)
 
+# Позволяет использовать локальные ссылки в json-схемах
+# См. fastjsonschema/ref_resolver.py::resolve_remote()
+# Неуказанный (пустой) протокол в json-схеме вызывает lambda-функцию
+__locrefhandler = {"": lambda file: json.load(open('api/schemas/' + file))}
+
 
 @bp.route('/imports', methods=['POST'])
 def post_imp():
@@ -59,7 +64,7 @@ def post_imp():
         # Проверка жителей отдельной схемой в цикле идёт быстрее
         ctzns = {}
         schema = json.load(open('api/schemas/crt_ctzn.json'))
-        validator = fastjsonschema.compile(schema)
+        validator = fastjsonschema.compile(schema, handlers=__locrefhandler)
 
         for ctzn in imp["citizens"]:
             validator(ctzn)
@@ -113,8 +118,9 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
     """
     new_fields = request.get_json()
     schema = json.load(open('api/schemas/upd_ctzn.json'))
+    validator = fastjsonschema.compile(schema, handlers=__locrefhandler)
     try:
-        fastjsonschema.validate(schema, new_fields)
+        validator(new_fields)
 
         if "birth_date" in new_fields:
             dd, mm, yyyy = map(int, new_fields["birth_date"].split('.'))
