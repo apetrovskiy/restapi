@@ -35,6 +35,7 @@ from fastjsonschema import JsonSchemaException
 from flask import Blueprint, request, jsonify, abort
 from numpy import percentile
 
+from api.orm import CtznsDAO, NotFound
 from api.db import get_db
 
 bp = Blueprint('controllers', __name__)
@@ -56,47 +57,12 @@ def post_imp():
     .. ID   - ключи словаря
     .. Родственники - перебор в цикле
     """
-    imp = request.get_json()
+    c = CtznsDAO(get_db())
     try:
-        schema = json.load(open('api/schemas/imp.json'))
-        fastjsonschema.validate(schema, imp)
-
-        # Проверка жителей отдельной схемой в цикле идёт быстрее
-        ctzns = {}
-        schema = json.load(open('api/schemas/crt_ctzn.json'))
-        validator = fastjsonschema.compile(schema, handlers=__locrefhandler)
-
-        for ctzn in imp["citizens"]:
-            validator(ctzn)
-            ctzn_id = ctzn["citizen_id"]
-
-            if str(ctzn_id) in ctzns.keys():
-                raise JsonSchemaException('citizen_ids are not unique')
-
-            dd, mm, yyyy = map(int, ctzn["birth_date"].split('.'))
-            try:
-                date(yyyy, mm, dd)
-            except ValueError as ve:
-                raise JsonSchemaException(ve)
-
-            ctzns[str(ctzn_id)] = ctzn
-
-        for ctzn_id, ctzn in ctzns.items():
-            for rel_id in ctzn["relatives"]:
-                rel = ctzns[str(rel_id)]
-
-                if int(ctzn_id) not in rel["relatives"]:
-                    raise JsonSchemaException(
-                        "citizens relatives are not bidirectional"
-                    )
+        imp_id = c.create(request.get_json())
 
     except JsonSchemaException as ve:
         abort(400, str(ve))
-
-    db = get_db()
-    imp_id = db.imports.count_documents({}) + 1
-    ctzns["_id"] = imp_id
-    db.imports.insert_one(ctzns)
 
     return jsonify({"data": {"import_id": imp_id}}), 201
 
@@ -117,57 +83,13 @@ def patch_ctzn(imp_id: int, ctzn_id: int):
     Изменение происходит перебором в цикле.
     """
     new_fields = request.get_json()
-    schema = json.load(open('api/schemas/upd_ctzn.json'))
-    validator = fastjsonschema.compile(schema, handlers=__locrefhandler)
+    c = CtznsDAO(get_db())
     try:
-        validator(new_fields)
-
-        if "birth_date" in new_fields:
-            dd, mm, yyyy = map(int, new_fields["birth_date"].split('.'))
-            try:
-                date(yyyy, mm, dd)
-            except ValueError as ve:
-                raise JsonSchemaException(ve)
-
+        ctzn = c.update(imp_id, ctzn_id, new_fields)
+    except NotFound as ve:
+        abort(404, str(ve))
     except JsonSchemaException as ve:
         abort(400, str(ve))
-
-    db = get_db()
-    ctzns = db.imports.find_one({"_id": imp_id})
-    ctzns_for_upd = {}
-
-    if ctzns is None:
-        abort(404, 'import doesn\'t exist')
-    if not str(ctzn_id) in ctzns:
-        abort(404, 'citizen doesn\'t exist')
-
-    ctzn = ctzns[str(ctzn_id)]
-
-    if "relatives" in new_fields:
-        prev_rels = ctzn["relatives"]
-        rels = new_fields["relatives"]
-
-        rels_add = set(rels) - set(prev_rels)
-        rels_rem = set(prev_rels) - set(rels)
-
-        for rel_id in rels_add.union(rels_rem):
-            try:
-                ctzns_for_upd[str(rel_id)] = ctzns[str(rel_id)]
-            except KeyError as ve:
-                abort(400, 'relative {} doesn\'t exist'.format(str(ve)))
-
-        for rel_id in rels_add:
-            ctzns_for_upd[str(rel_id)]["relatives"].append(ctzn_id)
-
-        for rel_id in rels_rem:
-            ctzns_for_upd[str(rel_id)]["relatives"].remove(ctzn_id)
-
-    ctzn.update(new_fields)
-    ctzns_for_upd[str(ctzn_id)] = ctzn
-
-    db.imports.update_one(
-        {"_id": imp_id},
-        {'$set': ctzns_for_upd})
 
     return jsonify({"data": ctzn}), 200
 
@@ -177,15 +99,12 @@ def get_ctzns(imp_id: int):
     """Возвращает список всех жителей для указанного набора данных.
 
     """
-    db = get_db()
-    ctzns = db.imports.find_one({"_id": imp_id})
-
-    if ctzns is None:
-        abort(404, 'import doesn\'t exist')
-
-    ctzns.pop("_id")
-
-    ctzns = list(ctzns.values())
+    c = CtznsDAO(get_db())
+    try:
+        ctzns = c.read(imp_id)
+        ctzns = list(ctzns.values())
+    except NotFound as ve:
+        abort(404, str(ve))
 
     return jsonify({"data": ctzns}), 200
 
@@ -198,13 +117,12 @@ def get_birthdays(imp_id: int):
 
     Поиск перебором в цикле.
     """
-    db = get_db()
-    ctzns = db.imports.find_one({"_id": imp_id})
+    c = CtznsDAO(get_db())
+    try:
+        ctzns = c.read(imp_id)
+    except NotFound as ve:
+        abort(404, str(ve))
 
-    if ctzns is None:
-        abort(404, 'import doesn\'t exist')
-
-    ctzns.pop("_id")
     months = dict((str(i), {}) for i in range(1, 13))
 
     for ctzn_id, ctzn in ctzns.items():
@@ -245,14 +163,12 @@ def get_age_stat(imp_id: int):
     Условие в скобках либо вычитает год, если дня рождения ещё не было,
     либо не делает ничего, если день рождения уже был.
     """
-    db = get_db()
+    c = CtznsDAO(get_db())
+    try:
+        ctzns = c.read(imp_id)
+    except NotFound as ve:
+        abort(404, str(ve))
 
-    ctzns = db.imports.find_one({"_id": imp_id})
-
-    if ctzns is None:
-        abort(404, 'import doesn\'t exist')
-
-    ctzns.pop("_id")
     towns = {}
 
     for ctzn in ctzns.values():
