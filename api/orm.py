@@ -6,30 +6,9 @@ from datetime import date
 import fastjsonschema
 from fastjsonschema import JsonSchemaException, validate
 
-"""
-collection [
-    {"import_id", "citizen_id", ...}
-]
-"""
-
 
 class NotFound(Exception):
     pass
-
-
-class Ctzn():
-    def __init__(self, citizen_id, town, street, building, apartment, name,
-                 birth_date, gender, relatives):
-        self.citizen_id = citizen_id
-        self.town = town
-        self.street = street
-        self.building = building
-        self.apartment = apartment
-        self.name = name
-        self.birth_date = birth_date
-        self.gender = gender
-        self.relatives = relatives
-        self.v = Validation()
 
 
 class Validation():
@@ -55,18 +34,15 @@ class Validation():
 class CtznsDAO():
     def __init__(self, mongo_db):
         self.mongo_db = mongo_db
-        self.collection.create_index("import_id")
-        self.collection.create_index("citizen_id")
         self.v = Validation()
 
     @property
     def collection(self):
-        return self.mongo_db['citizens']
+        return self.mongo_db['imports']
 
     def create(self, imp):
         self.v.for_imp(imp)
         ctzns = {}
-        imp_id = self.collection.count_documents({}) + 1
 
         for ctzn in imp["citizens"]:
             self.v.for_crt(ctzn)
@@ -76,7 +52,6 @@ class CtznsDAO():
             if str(ctzn_id) in ctzns.keys():
                 raise JsonSchemaException('citizen_ids are not unique')
 
-            ctzn["import_id"] = imp_id
             ctzns[str(ctzn_id)] = ctzn
 
         for ctzn_id, ctzn in ctzns.items():
@@ -88,25 +63,25 @@ class CtznsDAO():
                         "citizens relatives are not bidirectional"
                     )
 
-        self.collection.insert_many(ctzns.values())
+        imp_id = self.collection.count_documents({}) + 1
+        ctzns["_id"] = imp_id
+        self.collection.insert_one(ctzns)
 
         return imp_id
 
     def read(self, imp_id):
-        ctzns = self.collection.find({"import_id": imp_id}, {"_id": 0})
-        if not ctzns:
-            raise NotFound('import doesn\'t exist')
-        d = {}
+        ctzns = self.collection.find_one({"_id": imp_id}, {"_id": 0})
 
-        for ctzn in ctzns:
-            ctzn.pop("import_id")
-            d[str(ctzn["citizen_id"])] = ctzn
-        return d
+        if ctzns is None:
+            raise NotFound('import doesn\'t exist')
+
+        return ctzns
 
     def update(self, imp_id, ctzn_id, flds):
         ctzns = self.read(imp_id)
-        # if not str(ctzn_id) in ctzns:
-        #    raise NotFound('citizen doesn\'t exist')
+
+        if not str(ctzn_id) in ctzns:
+            raise NotFound('citizen doesn\'t exist')
 
         self.v.for_upd(flds)
         ctzns_for_upd = {}
