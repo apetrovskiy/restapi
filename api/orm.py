@@ -40,6 +40,14 @@ class CtznsDAO():
     def collection(self):
         return self.mongo_db['imports']
 
+    def _create_id(self):
+        id = 1
+
+        while self.collection.find_one({"_id": id}) is not None:
+            id += 1
+
+        return id
+
     def create(self, imp):
         self.v.for_imp(imp)
         ctzns = {}
@@ -63,7 +71,7 @@ class CtznsDAO():
                         "citizens relatives are not bidirectional"
                     )
 
-        imp_id = self.collection.count_documents({}) + 1
+        imp_id = self._create_id()
         ctzns["_id"] = imp_id
         self.collection.insert_one(ctzns)
 
@@ -83,12 +91,12 @@ class CtznsDAO():
         if not str(ctzn_id) in ctzns:
             raise NotFound('citizen doesn\'t exist')
 
+        ctzn = ctzns[str(ctzn_id)]
         self.v.for_upd(flds)
         ctzns_for_upd = {}
+
         if "birth_date" in flds:
             self.v.date(flds["birth_date"])
-
-        ctzn = ctzns[str(ctzn_id)]
 
         if "relatives" in flds:
             rels = flds["relatives"]
@@ -99,15 +107,20 @@ class CtznsDAO():
 
             for rel_id in rels_add.union(rels_rem):
                 try:
-                    ctzns_for_upd[str(rel_id)] = ctzns[str(rel_id)]
+                    rel = ctzns[str(rel_id)]
+                    ctzns_for_upd[str(rel_id)] = rel
                 except KeyError as ve:
-                    raise JsonSchemaException('relative {} doesn\'t exist'.format(str(ve)))
+                    raise JsonSchemaException(
+                        'relative {} doesn\'t exist'.format(str(ve))
+                    )
 
             for rel_id in rels_add:
-                ctzns_for_upd[str(rel_id)]["relatives"].append(ctzn_id)
+                rel = ctzns_for_upd[str(rel_id)]
+                rel["relatives"].append(ctzn_id)
 
             for rel_id in rels_rem:
-                ctzns_for_upd[str(rel_id)]["relatives"].remove(ctzn_id)
+                rel = ctzns_for_upd[str(rel_id)]
+                rel["relatives"].remove(ctzn_id)
 
         ctzn.update(flds)
         ctzns_for_upd[str(ctzn_id)] = ctzn
@@ -115,7 +128,10 @@ class CtznsDAO():
             {"_id": imp_id},
             {'$set': ctzns_for_upd}
         )
+
         return ctzn
 
-    def delete(self, ctzn):
-        pass
+    def delete(self, imp_id):
+        n = self.collection.delete_one({"_id": imp_id}).raw_result["n"]
+        if n == 0:
+            raise NotFound('import doesn\'t exist')
