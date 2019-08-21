@@ -71,10 +71,12 @@ def create_app(config=None):
 
     app.logger.addHandler(file_handler)
 
+    @app.errorhandler(400)
     @app.errorhandler(404)
     @app.errorhandler(405)
     def _handle_api_error(ex):
         nms = {
+            400: "Bad Request",
             404: "Not Found",
             405: "Method Not Allowed"
         }

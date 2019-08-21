@@ -4,10 +4,15 @@ import json
 from datetime import date
 
 import fastjsonschema
-from fastjsonschema import JsonSchemaException, validate
+
+from api.db import get_db
 
 
 class NotFound(Exception):
+    pass
+
+
+class ValidationError(Exception):
     pass
 
 
@@ -28,19 +33,18 @@ class Validation():
         try:
             date(yyyy, mm, dd)
         except ValueError as ve:
-            raise JsonSchemaException(ve)
+            raise ValidationError(ve)
 
 
 class CtznsDAO():
-    def __init__(self, mongo_db):
-        self.mongo_db = mongo_db
+    def __init__(self):
         self.v = Validation()
 
     @property
     def collection(self):
-        return self.mongo_db['imports']
+        return get_db()['imports']
 
-    def _create_id(self):
+    def _create_id(self) -> int:
         id = 1
 
         while self.collection.find_one({"_id": id}) is not None:
@@ -49,25 +53,32 @@ class CtznsDAO():
         return id
 
     def create(self, imp):
-        self.v.for_imp(imp)
+        try:
+            self.v.for_imp(imp)
+
+        except fastjsonschema.JsonSchemaException as ve:
+            raise ValidationError(ve)
+
         ctzns = {}
 
         for ctzn in imp["citizens"]:
-            self.v.for_crt(ctzn)
+            try:
+                self.v.for_crt(ctzn)
+
+            except fastjsonschema.JsonSchemaException as ve:
+                raise ValidationError(ve)
+
             self.v.date(ctzn["birth_date"])
             ctzn_id = ctzn["citizen_id"]
-
             if str(ctzn_id) in ctzns.keys():
-                raise JsonSchemaException('citizen_ids are not unique')
-
+                raise ValidationError('citizen_ids are not unique')
             ctzns[str(ctzn_id)] = ctzn
 
         for ctzn_id, ctzn in ctzns.items():
             for rel_id in ctzn["relatives"]:
                 rel = ctzns[str(rel_id)]
-
                 if int(ctzn_id) not in rel["relatives"]:
-                    raise JsonSchemaException(
+                    raise ValidationError(
                         "citizens relatives are not bidirectional"
                     )
 
@@ -79,7 +90,6 @@ class CtznsDAO():
 
     def read(self, imp_id):
         ctzns = self.collection.find_one({"_id": imp_id}, {"_id": 0})
-
         if ctzns is None:
             raise NotFound('import doesn\'t exist')
 
@@ -87,17 +97,18 @@ class CtznsDAO():
 
     def update(self, imp_id, ctzn_id, flds):
         ctzns = self.read(imp_id)
-
         if not str(ctzn_id) in ctzns:
             raise NotFound('citizen doesn\'t exist')
-
         ctzn = ctzns[str(ctzn_id)]
-        self.v.for_upd(flds)
-        ctzns_for_upd = {}
+        try:
+            self.v.for_upd(flds)
 
+        except fastjsonschema.JsonSchemaException as ve:
+            raise ValidationError(ve)
+
+        ctzns_for_upd = {}
         if "birth_date" in flds:
             self.v.date(flds["birth_date"])
-
         if "relatives" in flds:
             rels = flds["relatives"]
             prev_rels = ctzn["relatives"]
@@ -109,8 +120,9 @@ class CtznsDAO():
                 try:
                     rel = ctzns[str(rel_id)]
                     ctzns_for_upd[str(rel_id)] = rel
+
                 except KeyError as ve:
-                    raise JsonSchemaException(
+                    raise ValidationError(
                         'relative {} doesn\'t exist'.format(str(ve))
                     )
 
