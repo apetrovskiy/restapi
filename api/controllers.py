@@ -129,8 +129,6 @@ def get_age_stat(imp_id: int):
     разрезе возраста (полных лет) жителей: p50, p75, p99, где число -
     это значение перцентиля.
 
-    Для даты удаляются ведущие и завершающие пробелы.
-
     Колличество полных лет учитывает был ли уже день рождения в этом
     году или нет.
 
@@ -145,7 +143,7 @@ def get_age_stat(imp_id: int):
     towns = {}
 
     for ctzn in ctzns.values():
-        birth_date = datetime.strptime(ctzn["birth_date"].strip(), "%d.%m.%Y")
+        birth_date = datetime.strptime(ctzn["birth_date"], "%d.%m.%Y")
         today = date.today()
         if (today.month, today.day) < (birth_date.month, birth_date.day):
             was_already = False

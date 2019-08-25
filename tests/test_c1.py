@@ -43,7 +43,7 @@ def test_invalid_rels(client):
                         "building": "16к7стр5",
                         "apartment": 7,
                         "name": "Иванов Иван Иванович",
-                        "birth_date": " 26.12.1986",
+                        "birth_date": "26.12.1986",
                         "gender": "male",
                         "relatives": []
                     },
@@ -83,7 +83,7 @@ def test_invalid_month(client):
                         "building": "16к7стр5",
                         "apartment": 7,
                         "name": "Иванов Иван Иванович",
-                        "birth_date": " 26.13.1986",
+                        "birth_date": "26.13.1986",
                         "gender": "male",
                         "relatives": []
                     }
@@ -141,7 +141,7 @@ def test_string_max_length(client):
                         "building": "16к7стр5",
                         "apartment": 7,
                         "name": "Иванов Иван Иванович",
-                        "birth_date": "1.02.1986",
+                        "birth_date": "01.02.1986",
                         "gender": "male",
                         "relatives": []
                     }
@@ -229,7 +229,7 @@ def test_not_unique_ids(client):
                         "building": "16к7стр5",
                         "apartment": 7,
                         "name": "Иванов Иван Иванович",
-                        "birth_date": " 26.12.1986",
+                        "birth_date": "26.12.1986",
                         "gender": "male",
                         "relatives": [2]
                     },
@@ -269,7 +269,7 @@ def test_expected(client, app):
                         "building": "16к7стр5",
                         "apartment": 7,
                         "name": "Иванов Иван Иванович",
-                        "birth_date": " 26.12.1986",
+                        "birth_date": "26.12.1986",
                         "gender": "male",
                         "relatives": [2]
                     },
@@ -318,7 +318,7 @@ def test_expected(client, app):
                 "building": "16к7стр5",
                 "apartment": 7,
                 "name": "Иванов Иван Иванович",
-                "birth_date": " 26.12.1986",
+                "birth_date": "26.12.1986",
                 "gender": "male",
                 "relatives": [2]
             },
