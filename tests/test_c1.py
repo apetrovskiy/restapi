@@ -128,6 +128,35 @@ def test_invalid_day(client):
     }
 
 
+def test_string_max_length(client):
+    response = client.post(
+        '/imports',
+        data=json.dumps(
+            {
+                "citizens": [
+                    {
+                        "citizen_id": 1,
+                        "town": "М" * 257,
+                        "street": "Льва Толстого",
+                        "building": "16к7стр5",
+                        "apartment": 7,
+                        "name": "Иванов Иван Иванович",
+                        "birth_date": "31.02.1986",
+                        "gender": "male",
+                        "relatives": []
+                    }
+                ]
+            }
+        ),
+        content_type='application/json'
+    )
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request",
+        "description": "data must be shorter than or equal to 256 characters"
+    }
+
+
 def test_not_unique_ids(client):
     response = client.post(
         '/imports',
