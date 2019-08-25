@@ -65,9 +65,16 @@ class _Validation():
     def date(self, d):
         dd, mm, yyyy = map(int, d.split('.'))
         try:
-            date(yyyy, mm, dd)
+            check = date(yyyy, mm, dd)
         except ValueError as ve:
             raise ValidationError(ve)
+
+        today = date.today()
+
+        if check >= today:
+            raise ValidationError(
+                'birth date must be less than the current date'
+            )
 
 
 class CtznsDAO():
