@@ -74,7 +74,7 @@ def test_nf_citizen(client, data):
     }
 
 
-def test_invalid_date(client, app, data):
+def test_invalid_date(client, data):
     response = client.patch(
         '/imports/1/citizens/3',
         data=json.dumps(
@@ -88,6 +88,23 @@ def test_invalid_date(client, app, data):
     assert json.loads(response.data) == {
         "error": "Bad Request",
         "description": "day is out of range for month"
+    }
+
+
+def test_str_contain_letter_or_number(client, data):
+    response = client.patch(
+        '/imports/1/citizens/3',
+        data=json.dumps(
+            {
+                "town": "_"
+            }
+        ),
+        content_type='application/json'
+    )
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request",
+        "description": "data must contain letter or number"
     }
 
 

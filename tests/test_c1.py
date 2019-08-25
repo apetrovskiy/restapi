@@ -187,6 +187,35 @@ def test_date_is_more_than_current(client):
     }
 
 
+def test_str_contain_letter_or_number(client):
+    response = client.post(
+        '/imports',
+        data=json.dumps(
+            {
+                "citizens": [
+                    {
+                        "citizen_id": 1,
+                        "town": "_",
+                        "street": "Льва Толстого",
+                        "building": "16к7стр5",
+                        "apartment": 7,
+                        "name": "Иванов Иван Иванович",
+                        "birth_date": "01.01.1900",
+                        "gender": "male",
+                        "relatives": []
+                    }
+                ]
+            }
+        ),
+        content_type='application/json'
+    )
+    assert response.status_code == 400
+    assert json.loads(response.data) == {
+        "error": "Bad Request",
+        "description": "data must contain letter or number"
+    }
+
+
 def test_not_unique_ids(client):
     response = client.post(
         '/imports',

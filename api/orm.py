@@ -76,6 +76,14 @@ class _Validation():
                 'birth date must be less than the current date'
             )
 
+    def contain_ln(self, s):
+        contain = any(
+            c.isalpha() or c.isdigit()
+            for c in s
+        )
+        if not contain:
+            raise ValidationError('data must contain letter or number')
+
 
 class CtznsDAO():
     """Реализует методы для создания, чтения, редактирования и удаления
@@ -114,6 +122,10 @@ class CtznsDAO():
 
             except fastjsonschema.JsonSchemaException as ve:
                 raise ValidationError(ve)
+
+            self.v.contain_ln(ctzn["town"])
+            self.v.contain_ln(ctzn["street"])
+            self.v.contain_ln(ctzn["building"])
 
             self.v.date(ctzn["birth_date"])
             ctzn_id = ctzn["citizen_id"]
@@ -156,6 +168,13 @@ class CtznsDAO():
 
         except fastjsonschema.JsonSchemaException as ve:
             raise ValidationError(ve)
+
+        if "town" in flds:
+            self.v.contain_ln(flds["town"])
+        if "street" in flds:
+            self.v.contain_ln(flds["street"])
+        if "building" in flds:
+            self.v.contain_ln(flds["building"])
 
         ctzns_for_upd = {}
         if "birth_date" in flds:
