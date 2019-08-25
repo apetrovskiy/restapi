@@ -7,6 +7,9 @@
     ~~~~~~~~~
 
     .. api.db
+        Подключение базы данных
+
+    .. api.orm
         Обертка для pymongo
 
     .. api.controllers
@@ -15,11 +18,11 @@
     .. schemas
         Схемы для валидации данных в обработчиках
 
-
     Конфигурирование
     ~~~~~~~~~~~~~~~~
 
-    Укажите путь к файлу конфигурирования в переменной окружения RESTAPI_SETTINGS
+    Укажите путь к файлу конфигурирования в переменной окружения
+    RESTAPI_SETTINGS
 
     Доступные настройки:
 
@@ -32,11 +35,19 @@
     .. LOGS_DIR
         Путь к папке с логами ошибок
 
+    Файл конфигурирования по умолчанию:
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    MONGO_URI="mongodb://localhost:27017/"
+    MONGO_DB_NAME="dev"
+    LOGS_DIR="logs"
+
     Функции
     ~~~~~~~
 
     .. create_app(config: dict=None)
         Инициализирует поток приложения
+
 """
 
 import os
@@ -46,18 +57,19 @@ import traceback
 
 from flask import Flask, jsonify
 
+__all__ = ["create_app"]
+
 
 def create_app(config=None):
     app = Flask(__name__)
 
-    if config is None:
-        app.config.from_mapping(
-            MONGO_URI="mongodb://localhost:27017/",
-            MONGO_DB_NAME="dev",
-            LOGS_DIR="logs"
-        )
-        app.config.from_envvar('RESTAPI_SETTINGS', silent=True)
-    else:
+    app.config.from_mapping(
+        MONGO_URI="mongodb://localhost:27017/",
+        MONGO_DB_NAME="dev",
+        LOGS_DIR="logs"
+    )
+    app.config.from_envvar('RESTAPI_SETTINGS', silent=True)
+    if config is not None:
         app.config.from_mapping(config)
 
     if not os.path.exists(app.config['LOGS_DIR']):

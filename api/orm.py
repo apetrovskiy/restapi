@@ -1,4 +1,24 @@
 # -*- coding: utf-8 -*-
+"""
+    Исключения
+    ~~~~~~~~~~
+
+    .. NotFound
+
+    .. ValidationError
+
+    Методы
+    ~~~~~~
+
+    .. CtznDAO.create(import_data)
+
+    .. CtznDAO.read(import_id)
+
+    .. CtznDAO.update(import_id, citizen_id, fields_for_update)
+
+    .. CtznDAO.delete(import_id)
+
+"""
 
 import json
 from datetime import date
@@ -7,23 +27,37 @@ import fastjsonschema
 
 from api.db import get_db
 
+__all__ = ["NotFound", "ValidationError", "CtznsDAO"]
+
 
 class NotFound(Exception):
+    """При вызове методов для несуществующих import_id или citizen_id"""
+
     pass
 
 
 class ValidationError(Exception):
+    """При ошибках валидации"""
+
     pass
 
 
-class Validation():
+class _Validation():
+    """Реализует расширенные методы валидации."""
+
     def __init__(self):
-        self.for_imp = self.compile(json.load(open('api/schemas/imp.json')))
-        self.for_crt = self.compile(json.load(open('api/schemas/crt_ctzn.json')))
-        self.for_upd = self.compile(json.load(open('api/schemas/upd_ctzn.json')))
+        self.for_imp = self.compile(json.load(open(
+            'api/schemas/imp.json'
+        )))
+        self.for_crt = self.compile(json.load(open(
+            'api/schemas/crt_ctzn.json'
+        )))
+        self.for_upd = self.compile(json.load(open(
+            'api/schemas/upd_ctzn.json'
+        )))
 
     def compile(self, schema):
-        ref_handler = {"": lambda file: json.load(open('api/schemas/' + file))}
+        ref_handler = {"": lambda file: json.load(open(f'api/schemas/{file}'))}
         validator = fastjsonschema.compile(schema, handlers=ref_handler)
 
         return validator
@@ -37,15 +71,19 @@ class Validation():
 
 
 class CtznsDAO():
+    """Реализует методы для создания, чтения, редактирования и удаления
+    наборов с данными о жителях.
+
+    """
     def __init__(self):
-        self.v = Validation()
+        self.v = _Validation()
 
     @property
     def collection(self):
         return get_db()['imports']
 
-    def _create_id(self) -> int:
-        id = 1
+    def _create_id(self, start=1) -> int:
+        id = start
 
         while self.collection.find_one({"_id": id}) is not None:
             id += 1
@@ -53,6 +91,8 @@ class CtznsDAO():
         return id
 
     def create(self, imp):
+        """Проверяет и создает набор с данными о жителях."""
+
         try:
             self.v.for_imp(imp)
 
@@ -89,6 +129,8 @@ class CtznsDAO():
         return imp_id
 
     def read(self, imp_id):
+        """Возвращает набор с данными о жителях."""
+
         ctzns = self.collection.find_one({"_id": imp_id}, {"_id": 0})
         if ctzns is None:
             raise NotFound('import doesn\'t exist')
@@ -96,6 +138,8 @@ class CtznsDAO():
         return ctzns
 
     def update(self, imp_id, ctzn_id, flds):
+        """Обновляет данные о жителе в наборе."""
+
         ctzns = self.read(imp_id)
         if not str(ctzn_id) in ctzns:
             raise NotFound('citizen doesn\'t exist')
@@ -123,7 +167,7 @@ class CtznsDAO():
 
                 except KeyError as ve:
                     raise ValidationError(
-                        'relative {} doesn\'t exist'.format(str(ve))
+                        f'relative {str(ve)} doesn\'t exist'
                     )
 
             for rel_id in rels_add:
@@ -144,6 +188,8 @@ class CtznsDAO():
         return ctzn
 
     def delete(self, imp_id):
+        """Удаляет набор с данными о жителях."""
+
         n = self.collection.delete_one({"_id": imp_id}).raw_result["n"]
         if n == 0:
             raise NotFound('import doesn\'t exist')

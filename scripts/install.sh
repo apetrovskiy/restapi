@@ -8,13 +8,12 @@ sudo apt-get install -y mongodb-org
 sudo systemctl start mongod
 sudo systemctl enable mongod
 
-sudo apt-get install python3.7
-sudo apt-get install virtualenv
+sudo apt-get install -y python3.7
+sudo apt-get install -y virtualenv
 
 virtualenv -p python3.7 ~/restapi/venv
 . restapi/venv/bin/activate
-python --version
-pip -V
+
 pip install -e ~/restapi
 deactivate
 

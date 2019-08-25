@@ -14,19 +14,28 @@
     ]
 
     Хранение жителей в словаре увеличивает скорость доступа к отдельному
-    жителю, но затрудняет вывод всех жителей сразу.
-
+    жителю.
 
     Функции
     ~~~~~~~
 
     .. get_db()
+        Экземпляр базы данных для операций.
+
+    Команды
+    ~~~~~~~
+
+    .. drop-db
+        Очищает основную и тестовую базы данных.
+
 """
 
 import click
 from pymongo import MongoClient
 from flask import current_app, g
 from flask.cli import with_appcontext
+
+__all__ = ["get_db"]
 
 
 def get_db():
@@ -46,6 +55,7 @@ def close_db(e=None):
 def drop_db():
     db = get_db()  # Добавляет client в g
     g.client.drop_database(current_app.config['MONGO_DB_NAME'])
+    g.client.drop_database("test")
     close_db()
 
 

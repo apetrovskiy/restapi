@@ -17,6 +17,7 @@
 
     .. GET /imports/$import_id/towns/stat/percentile/age
         get_age_stat(import_id)
+
 """
 
 from datetime import datetime, date
@@ -26,19 +27,21 @@ from numpy import percentile
 
 from api.orm import CtznsDAO, NotFound, ValidationError
 
+__all__ = ["bp"]
 
 bp = Blueprint('controllers', __name__)
-db = CtznsDAO()
+_db = CtznsDAO()
 
 
 @bp.route('/imports', methods=['POST'])
 def post_imp():
-    """Принимает на вход набор с данными о жителях в формате json и сохраняет
-    его с уникальным идентификатором import_id.
+    """Принимает на вход набор с данными о жителях в формате json и
+    сохраняет его с уникальным идентификатором import_id.
+
     """
 
     try:
-        imp_id = db.create(request.get_json())
+        imp_id = _db.create(request.get_json())
 
     except ValidationError as ve:
         abort(400, str(ve))
@@ -48,12 +51,11 @@ def post_imp():
 
 @bp.route('/imports/<int:imp_id>/citizens/<int:ctzn_id>', methods=['PATCH'])
 def patch_ctzn(imp_id, ctzn_id):
-    """Изменяет информацию о жителе в указанном наборе данных.
-    """
+    """Изменяет информацию о жителе в указанном наборе данных."""
 
     new_fields = request.get_json()
     try:
-        ctzn = db.update(imp_id, ctzn_id, new_fields)
+        ctzn = _db.update(imp_id, ctzn_id, new_fields)
 
     except NotFound as ve:
         abort(404, str(ve))
@@ -66,11 +68,10 @@ def patch_ctzn(imp_id, ctzn_id):
 
 @bp.route('/imports/<int:imp_id>/citizens', methods=['GET'])
 def get_ctzns(imp_id: int):
-    """Возвращает список всех жителей для указанного набора данных.
-    """
+    """Возвращает список всех жителей для указанного набора данных."""
 
     try:
-        ctzns = db.read(imp_id)
+        ctzns = _db.read(imp_id)
 
     except NotFound as ve:
         abort(404, str(ve))
@@ -82,20 +83,21 @@ def get_ctzns(imp_id: int):
 
 @bp.route('/imports/<int:imp_id>/citizens/birthdays', methods=['GET'])
 def get_birthdays(imp_id: int):
-    """Возвращает жителей и количество подарков, которые они будут покупать
-    своим ближайшим родственникам (1-го порядка), сгруппированных по месяцам
-    из указанного набора данных.
+    """Возвращает жителей и количество подарков, которые они будут
+    покупать своим ближайшим родственникам (1-го порядка),
+    сгруппированных по месяцам из указанного набора данных.
+
     """
 
     try:
-        ctzns = db.read(imp_id)
+        ctzns = _db.read(imp_id)
 
     except NotFound as ve:
         abort(404, str(ve))
 
     months = dict(
         (str(i), {})
-        for i in range(1, 13)
+        for i in range(1, 12 + 1)
     )
 
     for ctzn_id, ctzn in ctzns.items():
@@ -115,7 +117,7 @@ def get_birthdays(imp_id: int):
             str(i),
             list(months[str(i)].values())
         )
-        for i in range(1, 13)
+        for i in range(1, 12 + 1)
     )
 
     return jsonify({"data": months}), 200
@@ -123,22 +125,19 @@ def get_birthdays(imp_id: int):
 
 @bp.route('/imports/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
 def get_age_stat(imp_id: int):
-    """Возвращает статистику по городам для указанного набора данных в разрезе
-    возраста (полных лет) жителей: p50, p75, p99, где число - это значение
-    перцентиля.
+    """Возвращает статистику по городам для указанного набора данных в
+    разрезе возраста (полных лет) жителей: p50, p75, p99, где число -
+    это значение перцентиля.
 
     Для даты удаляются ведущие и завершающие пробелы.
 
-    Колличество полных лет расчитывается по формуле:
-    age = today.year - birth_date.year - int(
-        (today.month, today.day) < (birth_date.month, birth_date.day)
-    )
-    Условие в скобках либо вычитает год, если дня рождения ещё не было,
-    либо не делает ничего, если день рождения уже был.
+    Колличество полных лет учитывает был ли уже день рождения в этом
+    году или нет.
+
     """
 
     try:
-        ctzns = db.read(imp_id)
+        ctzns = _db.read(imp_id)
 
     except NotFound as ve:
         abort(404, str(ve))
@@ -148,9 +147,12 @@ def get_age_stat(imp_id: int):
     for ctzn in ctzns.values():
         birth_date = datetime.strptime(ctzn["birth_date"].strip(), "%d.%m.%Y")
         today = date.today()
-        age = today.year - birth_date.year - int(
-            (today.month, today.day) < (birth_date.month, birth_date.day)
-        )
+        if (today.month, today.day) < (birth_date.month, birth_date.day):
+            was_already = False
+        else:
+            was_already = True
+        age = today.year - birth_date.year - int(not was_already)
+
         town = ctzn["town"]
         ages = towns.get(town, [])
         ages.append(age)

@@ -11,6 +11,7 @@
 
     .. gen_ctzns(n: int) -> list
         Генерирует n жителей
+
 """
 
 import pytest
@@ -20,6 +21,8 @@ import tempfile
 
 from api import create_app
 from api.db import drop_db
+
+__all__ = ["gen_ctzns"]
 
 
 @pytest.fixture()
@@ -52,10 +55,12 @@ def runner(app):
 
 
 def gen_ctzns(n: int) -> list:
+    """Также добавляет родственников для жителей.
+
+    Если жителей больше 10, то родственников будет только 20%.
+
     """
-        Также добавляет родственников для жителей. Если жителей больше 10,
-        то родственников будет только 20%.
-    """
+
     ctzns = []
 
     if n > 10:
@@ -78,7 +83,7 @@ def gen_ctzns(n: int) -> list:
         ctzns.append(ctzn)
 
     for c_id in range(1, n_rels + 1):
-        if n_rels + 1 == 2 * c_id:
+        if n_rels + 1 == 2 * c_id:  # Удаление связи с самим собой
             continue
         ctzns[c_id-1]["relatives"] = [n_rels + 1 - c_id]
 
