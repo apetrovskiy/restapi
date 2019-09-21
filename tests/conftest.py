@@ -29,7 +29,6 @@ __all__ = ["gen_ctzns"]
 def app():
     app = create_app(config={
         'TESTING': True,
-        'MONGO_URI': 'mongodb://localhost:27017/',
         'MONGO_DB_NAME': 'test',
         'LOGS_DIR': tempfile.mkdtemp()
     })
