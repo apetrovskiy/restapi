@@ -1,12 +1,12 @@
 #!/bin/sh
 
 sudo systemctl stop restapi
-cd ~/restapi
+cd /opt/restapi || { echo "Failure"; exit 1; }
 git pull
 . venv/bin/activate
 pip install -e .
 deactivate
-cd ~
+sudo systemctl daemon-reload
 sudo systemctl start restapi
 
 echo --------------------

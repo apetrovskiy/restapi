@@ -6,7 +6,7 @@ sudo rm -r /var/log/mongodb
 sudo rm -r /var/lib/mongodb
 
 sudo service restapi stop
-sudo rm -r ~/restapi/
+sudo rm -r /opt/restapi/
 
 sudo apt-get purge python3.7
 sudo apt-get purge virtualenv

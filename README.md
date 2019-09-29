@@ -7,15 +7,15 @@
 Перед установкой нужно создать deploy key
 
 ```shell
-cd ~
+cd /opt
 git clone git@github.com:egorchistov/restapi.git
-sh ~/restapi/scripts/install.sh
+sh /opt/restapi/scripts/install.sh
 ```
 
 # Запуск тестов
 
 ```shell
-cd ~/restapi
+cd /opt/restapi
 . venv/bin/activate
 coverage run -m pytest
 coverage report
@@ -24,7 +24,7 @@ coverage report
 # Запуск сервера для разработки
 
 ```shell
-cd ~/restapi
+cd /opt/restapi
 . venv/bin/activate
 export FLASK_APP=api
 export FLASK_ENV=development

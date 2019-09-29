@@ -11,13 +11,13 @@ sudo systemctl enable mongod
 sudo apt-get install -y python3.7
 sudo apt-get install -y virtualenv
 
-virtualenv -p python3.7 ~/restapi/venv
-. restapi/venv/bin/activate
+virtualenv -p python3.7 /opt/restapi/venv
+. /opt/restapi/venv/bin/activate
 
-pip install -e ~/restapi
+pip install -e /opt/restapi
 deactivate
 
-sudo cp ~/restapi/scripts/restapi.service /etc/systemd/system/restapi.service
+sudo cp /opt/restapi/scripts/restapi.service /etc/systemd/system/restapi.service
 sudo systemctl start restapi
 sudo systemctl enable restapi
 
