@@ -1,0 +1,32 @@
+version: '3.7'
+
+services:
+  mongo:
+    image: mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: me
+      MONGO_INITDB_ROOT_PASSWORD: hackme
+    command: mongod --logpath=/dev/null
+
+  dev:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo
+    environment:
+      MONGO_URI: mongodb://me:hackme@mongo/
+      MONGO_DBNAME: dev
+      MONGO_TESTDBNAME: test
+      FLASK_ENV: development
+      LOG_FILE: /dev/null
+    volumes:
+      - ./api:/mnt/api:ro
+    command: bash -c '
+        pylama &&
+        coverage run --source api -m pytest &&
+        coverage report -m  &&
+        python3 -m flask run --host=0.0.0.0 -p 8080
+      '

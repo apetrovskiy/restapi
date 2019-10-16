@@ -14,8 +14,8 @@
 
 """
 
+import os
 import pytest
-import random
 import json
 import tempfile
 
@@ -29,8 +29,9 @@ __all__ = ["gen_ctzns"]
 def app():
     app = create_app(config={
         'TESTING': True,
-        'MONGO_DB_NAME': 'test',
-        'LOGS_DIR': tempfile.mkdtemp()
+        'MONGO_URI': os.environ['MONGO_URI'],
+        'MONGO_DBNAME': os.environ['MONGO_TESTDBNAME'],
+        'LOG_FILE': tempfile.mktemp()
     })
 
     @app.route('/exc')

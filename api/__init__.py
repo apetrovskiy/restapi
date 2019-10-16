@@ -21,26 +21,16 @@
     Конфигурирование
     ~~~~~~~~~~~~~~~~
 
-    Укажите путь к файлу конфигурирования в переменной окружения
-    RESTAPI_SETTINGS
-
-    Доступные настройки:
+    Конфигурирование доступно через переменные окружения
 
     .. MONGO_URI
         uri для подключения к mongodb
 
-    .. MONGO_DB_NAME
-        Имя основной базы данных (Для тестовой используется test)
+    .. MONGO_DBNAME
+        Имя основной базы данных
 
-    .. LOGS_DIR
-        Путь к папке с логами ошибок
-
-    Файл конфигурирования по умолчанию:
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    MONGO_URI="mongodb://localhost:27017/"
-    MONGO_DB_NAME="dev"
-    LOGS_DIR="logs"
+    .. LOG_FILE
+        Путь к файлу логов
 
     Функции
     ~~~~~~~
@@ -51,7 +41,6 @@
 """
 
 import os
-import os.path
 import logging
 import traceback
 
@@ -60,22 +49,19 @@ from flask import Flask, jsonify
 __all__ = ["create_app"]
 
 
-def create_app(config=None):
+def create_app(config: dict = None):
     app = Flask(__name__)
 
-    app.config.from_mapping(
-        MONGO_URI="mongodb://localhost:27017/",
-        MONGO_DB_NAME="dev",
-        LOGS_DIR="logs"
-    )
-    app.config.from_envvar('RESTAPI_SETTINGS', silent=True)
-    if config is not None:
+    if config:
         app.config.from_mapping(config)
+    else:
+        app.config.from_mapping(
+            MONGO_URI=os.environ['MONGO_URI'],
+            MONGO_DBNAME=os.environ['MONGO_DBNAME'],
+            LOG_FILE=os.environ['LOG_FILE']
+        )
 
-    if not os.path.exists(app.config['LOGS_DIR']):
-        os.makedirs(app.config['LOGS_DIR'])
-
-    file_handler = logging.FileHandler(app.config['LOGS_DIR'] + '/api.log')
+    file_handler = logging.FileHandler(app.config['LOG_FILE'])
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s:\n%(message)s"
     )

@@ -9,7 +9,7 @@
 
 import json
 
-from tests.conftest import gen_ctzns
+from conftest import gen_ctzns
 
 
 def test_c1(client):

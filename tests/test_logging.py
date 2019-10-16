@@ -10,5 +10,5 @@ def test_500(client, app):
         "error": "Internal Server Error"
     }
 
-    with open(app.config["LOGS_DIR"] + '/api.log', 'r') as log:
+    with open(app.config["LOG_FILE"], 'r') as log:
         assert "ZeroDivisionError: some text" in log.read()

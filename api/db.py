@@ -42,7 +42,7 @@ def get_db():
     if 'client' not in g:
         g.client = MongoClient(current_app.config['MONGO_URI'])
 
-    return g.client[current_app.config['MONGO_DB_NAME']]
+    return g.client[current_app.config['MONGO_DBNAME']]
 
 
 def close_db(e=None):
@@ -53,8 +53,8 @@ def close_db(e=None):
 
 
 def drop_db():
-    db = get_db()  # Добавляет client в g
-    g.client.drop_database(current_app.config['MONGO_DB_NAME'])
+    get_db()  # Добавляет client в g
+    g.client.drop_database(current_app.config['MONGO_DBNAME'])
     g.client.drop_database("test")
     close_db()
 
