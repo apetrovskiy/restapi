@@ -22,8 +22,10 @@
 
 import json
 from datetime import date
+from typing import Callable, Dict, Any, List
 
 import fastjsonschema
+from pymongo.collection import Collection
 
 from api.db import get_db
 
@@ -42,7 +44,7 @@ class ValidationError(Exception):
     pass
 
 
-class _Validation():
+class _Validation:
     """Реализует расширенные методы валидации."""
 
     def __init__(self):
@@ -56,13 +58,18 @@ class _Validation():
             'api/schemas/upd_ctzn.json'
         )))
 
-    def compile(self, schema):
+    @staticmethod
+    def compile(schema: dict) -> Callable[..., None]:
         ref_handler = {"": lambda file: json.load(open(f'api/schemas/{file}'))}
         validator = fastjsonschema.compile(schema, handlers=ref_handler)
 
         return validator
 
-    def date(self, d):
+    @staticmethod
+    def date(d: str) -> None:
+        if d is None:
+            return
+
         dd, mm, yyyy = map(int, d.split('.'))
         try:
             check = date(yyyy, mm, dd)
@@ -76,7 +83,11 @@ class _Validation():
                 'birth date must be less than the current date'
             )
 
-    def contain_ln(self, s):
+    @staticmethod
+    def contain_ln(s: str) -> None:
+        if s is None:
+            return
+
         contain = any(
             c.isalpha() or c.isdigit()
             for c in s
@@ -85,7 +96,7 @@ class _Validation():
             raise ValidationError('data must contain letter or number')
 
 
-class CtznsDAO():
+class CtznsDAO:
     """Реализует методы для создания, чтения, редактирования и удаления
     наборов с данными о жителях.
 
@@ -94,18 +105,18 @@ class CtznsDAO():
         self.v = _Validation()
 
     @property
-    def collection(self):
+    def collection(self) -> Collection:
         return get_db()['imports']
 
-    def _create_id(self, start=1) -> int:
-        id = start
+    def _create_id(self, start: int = 1) -> int:
+        _id = start
 
-        while self.collection.find_one({"_id": id}) is not None:
-            id += 1
+        while self.collection.find_one({"_id": _id}) is not None:
+            _id += 1
 
-        return id
+        return _id
 
-    def create(self, imp):
+    def create(self, imp: Dict[str, List[Dict[str, Any]]]) -> int:
         """Проверяет и создает набор с данными о жителях."""
 
         try:
@@ -114,7 +125,7 @@ class CtznsDAO():
         except fastjsonschema.JsonSchemaException as ve:
             raise ValidationError(ve)
 
-        ctzns = {}
+        ctzns: Dict[str, Dict[str, Any]] = {}
 
         for ctzn in imp["citizens"]:
             try:
@@ -142,12 +153,13 @@ class CtznsDAO():
                     )
 
         imp_id = self._create_id()
-        ctzns["_id"] = imp_id
-        self.collection.insert_one(ctzns)
+        ctzns_and_id: Dict[str, Any] = ctzns
+        ctzns_and_id["_id"] = imp_id
+        self.collection.insert_one(ctzns_and_id)
 
         return imp_id
 
-    def read(self, imp_id):
+    def read(self, imp_id: int) -> Dict[str, Dict[str, Any]]:
         """Возвращает набор с данными о жителях."""
 
         ctzns = self.collection.find_one({"_id": imp_id}, {"_id": 0})
@@ -156,7 +168,46 @@ class CtznsDAO():
 
         return ctzns
 
-    def update(self, imp_id, ctzn_id, flds):
+    @staticmethod
+    def _update_relatives(
+            rels: List[int],
+            prev_rels: List[int],
+            ctzns: Dict[str, Dict[str, Any]],
+            ctzn_id: int
+    ) -> Dict[str, dict]:
+        if rels is None or prev_rels is None:
+            return {}
+
+        rels_add = set(rels) - set(prev_rels)
+        rels_rem = set(prev_rels) - set(rels)
+
+        ctzns_for_upd = {}
+        for rel_id in rels_add.union(rels_rem):
+            try:
+                rel = ctzns[str(rel_id)]
+                ctzns_for_upd[str(rel_id)] = rel
+
+            except KeyError as ve:
+                raise ValidationError(
+                    f'relative {str(ve)} doesn\'t exist'
+                )
+
+        for rel_id in rels_add:
+            rel = ctzns_for_upd[str(rel_id)]
+            rel["relatives"].append(ctzn_id)
+
+        for rel_id in rels_rem:
+            rel = ctzns_for_upd[str(rel_id)]
+            rel["relatives"].remove(ctzn_id)
+
+        return ctzns_for_upd
+
+    def update(
+            self,
+            imp_id: int,
+            ctzn_id: int,
+            flds: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Обновляет данные о жителе в наборе."""
 
         ctzns = self.read(imp_id)
@@ -169,40 +220,17 @@ class CtznsDAO():
         except fastjsonschema.JsonSchemaException as ve:
             raise ValidationError(ve)
 
-        if "town" in flds:
-            self.v.contain_ln(flds["town"])
-        if "street" in flds:
-            self.v.contain_ln(flds["street"])
-        if "building" in flds:
-            self.v.contain_ln(flds["building"])
+        for field in ("street", "town", "building"):
+            self.v.contain_ln(flds.get(field, None))
 
-        ctzns_for_upd = {}
-        if "birth_date" in flds:
-            self.v.date(flds["birth_date"])
-        if "relatives" in flds:
-            rels = flds["relatives"]
-            prev_rels = ctzn["relatives"]
+        self.v.date(flds.get("birth_date", None))
 
-            rels_add = set(rels) - set(prev_rels)
-            rels_rem = set(prev_rels) - set(rels)
-
-            for rel_id in rels_add.union(rels_rem):
-                try:
-                    rel = ctzns[str(rel_id)]
-                    ctzns_for_upd[str(rel_id)] = rel
-
-                except KeyError as ve:
-                    raise ValidationError(
-                        f'relative {str(ve)} doesn\'t exist'
-                    )
-
-            for rel_id in rels_add:
-                rel = ctzns_for_upd[str(rel_id)]
-                rel["relatives"].append(ctzn_id)
-
-            for rel_id in rels_rem:
-                rel = ctzns_for_upd[str(rel_id)]
-                rel["relatives"].remove(ctzn_id)
+        ctzns_for_upd = self._update_relatives(
+            flds.get("relatives", None),
+            ctzn.get("relatives", None),
+            ctzns,
+            ctzn_id
+        )
 
         ctzn.update(flds)
         ctzns_for_upd[str(ctzn_id)] = ctzn
@@ -213,7 +241,7 @@ class CtznsDAO():
 
         return ctzn
 
-    def delete(self, imp_id):
+    def delete(self, imp_id: int) -> None:
         """Удаляет набор с данными о жителях."""
 
         n = self.collection.delete_one({"_id": imp_id}).raw_result["n"]

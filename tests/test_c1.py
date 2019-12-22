@@ -12,7 +12,7 @@ def test_not_json(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "data must be object"
     }
 
@@ -25,7 +25,7 @@ def test_emty_json(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "data must contain ['citizens'] properties"
     }
 
@@ -65,7 +65,7 @@ def test_invalid_rels(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "citizens relatives are not bidirectional"
     }
 
@@ -94,7 +94,7 @@ def test_invalid_month(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "month must be in 1..12"
     }
 
@@ -123,7 +123,7 @@ def test_invalid_day(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "day is out of range for month"
     }
 
@@ -152,7 +152,7 @@ def test_string_max_length(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "data must be shorter than or equal to 256 characters"
     }
 
@@ -181,7 +181,7 @@ def test_date_is_more_than_current(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description":
             "birth date must be less than the current date"
     }
@@ -211,7 +211,7 @@ def test_str_contain_letter_or_number(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "data must contain letter or number"
     }
 
@@ -251,7 +251,7 @@ def test_not_unique_ids(client):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "citizen_ids are not unique"
     }
 

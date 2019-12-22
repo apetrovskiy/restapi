@@ -6,18 +6,28 @@
     .. data
         Добавляет в тестовую базу данных данные о трех горожанах
 
+    .. more_data
+        Возвращает List[Dict[str, Any]] с 10.000 жителями.
+        Определен не в test_stress из-за проблем и импортированием
+
+
     Функции
     ~~~~~~~
 
-    .. gen_ctzns(n: int) -> list
+    .. gen_ctzns(n: int) -> List[Dict[str, Any]]
         Генерирует n жителей
 
 """
 
 import os
+from typing import List, Dict, Any
+
 import pytest
 import json
 import tempfile
+
+from flask import Flask
+from flask.testing import FlaskClient, FlaskCliRunner
 
 from api import create_app
 from api.db import drop_db
@@ -26,16 +36,16 @@ __all__ = ["gen_ctzns"]
 
 
 @pytest.fixture()
-def app():
+def app() -> Flask:
     app = create_app(config={
-        'TESTING': True,
         'MONGO_URI': os.environ['MONGO_URI'],
         'MONGO_DBNAME': os.environ['MONGO_TESTDBNAME'],
         'LOG_FILE': tempfile.mktemp()
     })
 
     @app.route('/exc')
-    def raise_exc():
+    def raise_exc() -> ZeroDivisionError:
+        """Для тестирования логирования"""
         raise ZeroDivisionError("some text")
 
     with app.app_context():
@@ -45,17 +55,18 @@ def app():
 
 
 @pytest.fixture()
-def client(app):
+def client(app: Flask) -> FlaskClient:
     return app.test_client()
 
 
 @pytest.fixture()
-def runner(app):
+def runner(app: Flask) -> FlaskCliRunner:
     return app.test_cli_runner()
 
 
-def gen_ctzns(n: int) -> list:
-    """Также добавляет родственников для жителей.
+def gen_ctzns(n: int) -> List[Dict[str, Any]]:
+    """Генерирует информацию о жителях,
+    а также добавляет родственников для жителей.
 
     Если жителей больше 10, то родственников будет только 20%.
 
@@ -91,7 +102,7 @@ def gen_ctzns(n: int) -> list:
 
 
 @pytest.fixture()
-def data(client):
+def data(client: FlaskClient) -> None:
     client.post(
         '/imports',
         data=json.dumps(
@@ -100,3 +111,8 @@ def data(client):
             }),
         content_type='application/json'
     )
+
+
+@pytest.fixture()
+def more_data() -> List[Dict[str, Any]]:
+    return gen_ctzns(10 ** 4)

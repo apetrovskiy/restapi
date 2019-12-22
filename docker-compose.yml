@@ -6,7 +6,6 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: me
       MONGO_INITDB_ROOT_PASSWORD: hackme
-    command: mongod --logpath=/dev/null
 
   dev:
     build:
@@ -26,6 +25,7 @@ services:
       - ./api:/mnt/api:ro
     command: bash -c '
         pylama &&
+        mypy --ignore-missing-imports */**/*.py &&
         coverage run --source api -m pytest &&
         coverage report -m  &&
         python3 -m flask run --host=0.0.0.0 -p 8080

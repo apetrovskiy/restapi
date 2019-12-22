@@ -4,25 +4,26 @@
     ~~~~~~~~~~~~~~~~~~
 
     .. POST /imports
-        post_imp()
+        post_imp() -> Response
 
     .. PATCH /imports/$import_id/citizens/$citizen_id
-        patch_ctzn(import_id, citizen_id)
+        patch_ctzn(import_id: int, citizen_id: int) -> Response
 
     .. GET /imports/$import_id/citizens
-        get_ctzns(import_id)
+        get_ctzns(import_id: int) -> Response
 
     .. GET /imports/$import_id/citizens/birthdays
-        get_birthdays(import_id)
+        get_birthdays(import_id: int) -> Response
 
     .. GET /imports/$import_id/towns/stat/percentile/age
-        get_age_stat(import_id)
+        get_age_stat(import_id: int) -> Response
 
 """
 
 from datetime import datetime, date
+from typing import Dict, List
 
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, request, jsonify, abort, make_response, Response
 from numpy import percentile
 
 from api.orm import CtznsDAO, NotFound, ValidationError
@@ -33,8 +34,8 @@ bp = Blueprint('controllers', __name__)
 _db = CtznsDAO()
 
 
-@bp.route('/imports', methods=['POST'])
-def post_imp():
+@bp.route('', methods=['POST'])
+def post_imp() -> Response:
     """Принимает на вход набор с данными о жителях в формате json и
     сохраняет его с уникальным идентификатором import_id.
 
@@ -44,13 +45,16 @@ def post_imp():
         imp_id = _db.create(request.get_json())
 
     except ValidationError as ve:
-        abort(400, str(ve))
+        return abort(400, str(ve))
 
-    return jsonify({"data": {"import_id": imp_id}}), 201
+    return make_response(
+        jsonify({"data": {"import_id": imp_id}}),
+        201
+    )
 
 
-@bp.route('/imports/<int:imp_id>/citizens/<int:ctzn_id>', methods=['PATCH'])
-def patch_ctzn(imp_id, ctzn_id):
+@bp.route('/<int:imp_id>/citizens/<int:ctzn_id>', methods=['PATCH'])
+def patch_ctzn(imp_id: int, ctzn_id: int) -> Response:
     """Изменяет информацию о жителе в указанном наборе данных."""
 
     new_fields = request.get_json()
@@ -58,31 +62,35 @@ def patch_ctzn(imp_id, ctzn_id):
         ctzn = _db.update(imp_id, ctzn_id, new_fields)
 
     except NotFound as ve:
-        abort(404, str(ve))
+        return abort(404, str(ve))
 
     except ValidationError as ve:
-        abort(400, str(ve))
+        return abort(400, str(ve))
 
-    return jsonify({"data": ctzn}), 200
+    return make_response(
+        jsonify({"data": ctzn}),
+        200
+    )
 
 
-@bp.route('/imports/<int:imp_id>/citizens', methods=['GET'])
-def get_ctzns(imp_id: int):
+@bp.route('/<int:imp_id>/citizens', methods=['GET'])
+def get_ctzns(imp_id: int) -> Response:
     """Возвращает список всех жителей для указанного набора данных."""
 
     try:
         ctzns = _db.read(imp_id)
 
     except NotFound as ve:
-        abort(404, str(ve))
+        return abort(404, str(ve))
 
-    ctzns = list(ctzns.values())
+    return make_response(
+        jsonify({"data": list(ctzns.values())}),
+        200
+    )
 
-    return jsonify({"data": ctzns}), 200
 
-
-@bp.route('/imports/<int:imp_id>/citizens/birthdays', methods=['GET'])
-def get_birthdays(imp_id: int):
+@bp.route('/<int:imp_id>/citizens/birthdays', methods=['GET'])
+def get_birthdays(imp_id: int) -> Response:
     """Возвращает жителей и количество подарков, которые они будут
     покупать своим ближайшим родственникам (1-го порядка),
     сгруппированных по месяцам из указанного набора данных.
@@ -93,9 +101,9 @@ def get_birthdays(imp_id: int):
         ctzns = _db.read(imp_id)
 
     except NotFound as ve:
-        abort(404, str(ve))
+        return abort(404, str(ve))
 
-    months = dict(
+    months: Dict[str, dict] = dict(
         (str(i), {})
         for i in range(1, 12 + 1)
     )
@@ -112,19 +120,20 @@ def get_birthdays(imp_id: int):
             c["presents"] += 1
             months[month][int(ctzn_id)] = c
 
-    months = dict(
-        (
-            str(i),
-            list(months[str(i)].values())
-        )
-        for i in range(1, 12 + 1)
+    return make_response(
+        jsonify({"data": dict(
+            (
+                str(i),
+                list(months[str(i)].values())
+            )
+            for i in range(1, 12 + 1)
+        )}),
+        200
     )
 
-    return jsonify({"data": months}), 200
 
-
-@bp.route('/imports/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
-def get_age_stat(imp_id: int):
+@bp.route('/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
+def get_age_stat(imp_id: int) -> Response:
     """Возвращает статистику по городам для указанного набора данных в
     разрезе возраста (полных лет) жителей: p50, p75, p99, где число -
     это значение перцентиля.
@@ -138,9 +147,9 @@ def get_age_stat(imp_id: int):
         ctzns = _db.read(imp_id)
 
     except NotFound as ve:
-        abort(404, str(ve))
+        return abort(404, str(ve))
 
-    towns = {}
+    towns: Dict[str, List[int]] = {}
 
     for ctzn in ctzns.values():
         birth_date = datetime.strptime(ctzn["birth_date"], "%d.%m.%Y")
@@ -159,8 +168,7 @@ def get_age_stat(imp_id: int):
     stats = []
 
     for town in towns:
-        stat = {}
-        stat["town"] = town
+        stat = {"town": town}
 
         for pv in (50, 75, 99):
             stat["p" + str(pv)] = round(
@@ -169,4 +177,7 @@ def get_age_stat(imp_id: int):
 
         stats.append(stat)
 
-    return jsonify({"data": stats}), 200
+    return make_response(
+        jsonify({"data": stats}),
+        200
+    )

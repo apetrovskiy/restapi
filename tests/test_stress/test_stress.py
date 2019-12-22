@@ -9,16 +9,12 @@
 
 import json
 
-from conftest import gen_ctzns
 
-
-def test_c1(client):
-    ctzns = gen_ctzns(10 ** 4)
-
+def test_c1(client, more_data):
     response = client.post(
         '/imports',
         data=json.dumps(
-            {"citizens": ctzns}
+            {"citizens": more_data}
         ),
         content_type='application/json'
     )

@@ -10,7 +10,7 @@ def test_get_db(app):
 
 
 def test_drop_db_command(runner, monkeypatch):
-    class Recorder():
+    class Recorder:
         called = False
 
     def fake_drop_db():
@@ -18,5 +18,5 @@ def test_drop_db_command(runner, monkeypatch):
 
     monkeypatch.setattr('api.db.drop_db', fake_drop_db)
     result = runner.invoke(args=['drop-db'])
-    assert 'Done.' in result.output
+    assert 'is dropped' in result.output
     assert Recorder.called

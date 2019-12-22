@@ -1,4 +1,4 @@
-flask
-pymongo[srv]
-fastjsonschema
-numpy
+flask>=1.1.1
+pymongo[srv]>=3.10.0
+fastjsonschema>=2.14.2
+numpy>=1.18.0

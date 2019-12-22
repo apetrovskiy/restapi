@@ -7,7 +7,7 @@ def test_nf_import(client, data):
     response = client.get('/imports/100/citizens/birthdays')
     assert response.status_code == 404
     assert json.loads(response.data) == {
-        "error": "Not Found",
+        "error": 404,
         "description": "import doesn't exist"
     }
 

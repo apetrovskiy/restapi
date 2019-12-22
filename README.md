@@ -6,6 +6,13 @@
 
 (Автоматически запускает линтер и тесты)
 
-```shell
-docker-compose up --build --abort-on-container-exit --remove-orphans
+```shell script
+docker-compose up --build --abort-on-container-exit
 ```
+
+Для очистки текущей базы данных используйте
+```shell script
+docker exec restapi_dev_1 python3 -m flask drop-db
+```
+, где restapi_dev_1 - имя контейнера с приложением
+ 

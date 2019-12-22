@@ -12,7 +12,7 @@ def test_not_json(client, data):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "data must be object"
     }
 
@@ -25,7 +25,7 @@ def test_empty_json(client, data):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "data must contain at least 1 properties"
     }
 
@@ -47,7 +47,7 @@ def test_nf_import(client, data):
     )
     assert response.status_code == 404
     assert json.loads(response.data) == {
-        "error": "Not Found",
+        "error": 404,
         "description": "import doesn't exist"
     }
 
@@ -69,7 +69,7 @@ def test_nf_citizen(client, data):
     )
     assert response.status_code == 404
     assert json.loads(response.data) == {
-        "error": "Not Found",
+        "error": 404,
         "description": "citizen doesn't exist"
     }
 
@@ -86,7 +86,7 @@ def test_invalid_date(client, data):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "day is out of range for month"
     }
 
@@ -103,7 +103,7 @@ def test_str_contain_letter_or_number(client, data):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "data must contain letter or number"
     }
 
@@ -222,7 +222,7 @@ def test_rem_rels(client, app, data):
         assert db.imports.find_one({"_id": 1})["3"]["relatives"] == []
 
 
-def test_invalid_rel(client, app, data):
+def test_invalid_rel(client, data):
     response = client.patch(
         '/imports/1/citizens/3',
         data=json.dumps(
@@ -234,6 +234,6 @@ def test_invalid_rel(client, app, data):
     )
     assert response.status_code == 400
     assert json.loads(response.data) == {
-        "error": "Bad Request",
+        "error": 400,
         "description": "relative '100' doesn't exist"
     }
