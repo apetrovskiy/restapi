@@ -29,6 +29,7 @@
         Очищает основную базу данных.
 
 """
+from typing import Optional
 
 import click
 from pymongo import MongoClient
@@ -46,7 +47,7 @@ def get_db() -> Database:
     return g.client[current_app.config['MONGO_DBNAME']]
 
 
-def close_db(e=None) -> None:
+def close_db(e: Optional[Exception] = None) -> None:
     if e is not None:
         current_app.logger.error(e)
 

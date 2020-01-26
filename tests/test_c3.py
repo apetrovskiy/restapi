@@ -3,52 +3,18 @@
 import json
 
 
-def test_nf_import(client, data):
-    response = client.get('/imports/100/citizens')
-    assert response.status_code == 404
-    assert json.loads(response.data) == {
-        "error": 404,
-        "description": "import doesn't exist"
-    }
-
-
-def test_expected(client, data):
+def test_nf_import(client):
     response = client.get('/imports/1/citizens')
+    assert response.status_code == 404
+    assert json.loads(response.data).get("error", None) == 404
+
+
+def test_expected(client, data3):
+    response = client.get(f'/imports/{data3}/citizens')
     assert response.status_code == 200
-    assert json.loads(response.data) == {
-        "data": [
-            {
-                "citizen_id": 1,
-                "town": "abc",
-                "street": "abc",
-                "building": "abc",
-                "apartment": 1,
-                "name": "abc",
-                "birth_date": "12.12.2012",
-                "gender": "male",
-                "relatives": [3]
-            },
-            {
-                "citizen_id": 2,
-                "town": "abc",
-                "street": "abc",
-                "building": "abc",
-                "apartment": 1,
-                "name": "abc",
-                "birth_date": "12.12.2012",
-                "gender": "male",
-                "relatives": []
-            },
-            {
-                "citizen_id": 3,
-                "town": "abc",
-                "street": "abc",
-                "building": "abc",
-                "apartment": 1,
-                "name": "abc",
-                "birth_date": "12.12.2012",
-                "gender": "male",
-                "relatives": [1]
-            }
-        ]
-    }
+    data = json.loads(response.data).get("data", [])
+
+    ctzns = {int(ctzn["citizen_id"]): ctzn for ctzn in data}
+    assert set(ctzns.keys()) == {1, 2, 3}
+    assert ctzns[1]["relatives"] == [3]
+    assert ctzns[3]["relatives"] == [1]

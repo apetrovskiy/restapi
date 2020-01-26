@@ -21,28 +21,30 @@
 """
 
 from datetime import datetime, date
-from typing import Dict, List
+from typing import Dict, List, Any
 
-from flask import Blueprint, request, jsonify, abort, make_response, Response
+from flask import Blueprint, request, jsonify, abort, make_response
 from numpy import percentile
 
-from api.orm import CtznsDAO, NotFound, ValidationError
+from api.orm import CtznsDAO
+from api.validation import NotFound, ValidationError
+
 
 __all__ = ["bp"]
 
 bp = Blueprint('controllers', __name__)
-_db = CtznsDAO()
+dao = CtznsDAO()
 
 
 @bp.route('', methods=['POST'])
-def post_imp() -> Response:
+def post_imp() -> Any:
     """Принимает на вход набор с данными о жителях в формате json и
     сохраняет его с уникальным идентификатором import_id.
 
     """
 
     try:
-        imp_id = _db.create(request.get_json())
+        imp_id = dao.create(request.get_json())
 
     except ValidationError as ve:
         return abort(400, str(ve))
@@ -54,12 +56,12 @@ def post_imp() -> Response:
 
 
 @bp.route('/<int:imp_id>/citizens/<int:ctzn_id>', methods=['PATCH'])
-def patch_ctzn(imp_id: int, ctzn_id: int) -> Response:
+def patch_ctzn(imp_id: int, ctzn_id: int) -> Any:
     """Изменяет информацию о жителе в указанном наборе данных."""
 
     new_fields = request.get_json()
     try:
-        ctzn = _db.update(imp_id, ctzn_id, new_fields)
+        ctzn = dao.update(imp_id, ctzn_id, new_fields)
 
     except NotFound as ve:
         return abort(404, str(ve))
@@ -74,11 +76,11 @@ def patch_ctzn(imp_id: int, ctzn_id: int) -> Response:
 
 
 @bp.route('/<int:imp_id>/citizens', methods=['GET'])
-def get_ctzns(imp_id: int) -> Response:
+def get_ctzns(imp_id: int) -> Any:
     """Возвращает список всех жителей для указанного набора данных."""
 
     try:
-        ctzns = _db.read(imp_id)
+        ctzns = dao.read(imp_id)
 
     except NotFound as ve:
         return abort(404, str(ve))
@@ -90,7 +92,7 @@ def get_ctzns(imp_id: int) -> Response:
 
 
 @bp.route('/<int:imp_id>/citizens/birthdays', methods=['GET'])
-def get_birthdays(imp_id: int) -> Response:
+def get_birthdays(imp_id: int) -> Any:
     """Возвращает жителей и количество подарков, которые они будут
     покупать своим ближайшим родственникам (1-го порядка),
     сгруппированных по месяцам из указанного набора данных.
@@ -98,12 +100,12 @@ def get_birthdays(imp_id: int) -> Response:
     """
 
     try:
-        ctzns = _db.read(imp_id)
+        ctzns = dao.read(imp_id)
 
     except NotFound as ve:
         return abort(404, str(ve))
 
-    months: Dict[str, dict] = dict(
+    months: Dict[str, Dict[int, Dict[str, int]]] = dict(
         (str(i), {})
         for i in range(1, 12 + 1)
     )
@@ -133,7 +135,7 @@ def get_birthdays(imp_id: int) -> Response:
 
 
 @bp.route('/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
-def get_age_stat(imp_id: int) -> Response:
+def get_age_stat(imp_id: int) -> Any:
     """Возвращает статистику по городам для указанного набора данных в
     разрезе возраста (полных лет) жителей: p50, p75, p99, где число -
     это значение перцентиля.
@@ -144,7 +146,7 @@ def get_age_stat(imp_id: int) -> Response:
     """
 
     try:
-        ctzns = _db.read(imp_id)
+        ctzns = dao.read(imp_id)
 
     except NotFound as ve:
         return abort(404, str(ve))

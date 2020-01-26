@@ -9,14 +9,17 @@
     .. api.db
         Подключение базы данных
 
+    .. api.validation
+        Валидация данных
+
     .. api.orm
         Обертка для pymongo
 
     .. api.controllers
         Реализация обработчиков
 
-    .. schemas
-        Схемы для валидации данных в обработчиках
+    .. citizen_schema.py
+        Схема для валидации данных в обработчиках
 
     Конфигурирование
     ~~~~~~~~~~~~~~~~
@@ -29,9 +32,6 @@
     .. MONGO_DBNAME
         Имя основной базы данных
 
-    .. LOG_FILE
-        Путь к файлу логов
-
     Функции
     ~~~~~~~
 
@@ -41,17 +41,16 @@
 """
 
 import os
-import logging
 import traceback
 
-from flask import Flask, jsonify, Response, make_response
+from flask import Flask, jsonify, make_response
 from werkzeug.exceptions import HTTPException
-from typing import Optional
+from typing import Optional, Dict, Any
 
 __all__ = ["create_app"]
 
 
-def create_app(config: Optional[dict] = None) -> Flask:
+def create_app(config: Optional[Dict[str, str]] = None) -> Flask:
     app = Flask(__name__)
 
     if config:
@@ -59,21 +58,13 @@ def create_app(config: Optional[dict] = None) -> Flask:
     else:
         app.config.from_mapping(
             MONGO_URI=os.environ['MONGO_URI'],
-            MONGO_DBNAME=os.environ['MONGO_DBNAME'],
-            LOG_FILE=os.environ['LOG_FILE']
+            MONGO_DBNAME=os.environ['MONGO_DBNAME']
         )
-
-    file_handler = logging.FileHandler(app.config['LOG_FILE'])
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s:\n%(message)s"
-    )
-    file_handler.setFormatter(formatter)
-    app.logger.addHandler(file_handler)
 
     @app.errorhandler(400)
     @app.errorhandler(404)
     @app.errorhandler(405)
-    def _handle_api_error(ex: HTTPException) -> Response:
+    def _handle_api_error(ex: HTTPException) -> Any:
         return make_response(
             jsonify(
                 error=ex.code,
@@ -83,11 +74,13 @@ def create_app(config: Optional[dict] = None) -> Flask:
         )
 
     @app.errorhandler(Exception)
-    def _handle_unexpected_error(exc: Exception) -> Response:
-        app.logger.error(exc)
+    def _handle_unexpected_error(exc: Exception) -> Any:
         app.logger.error(traceback.format_exc())
         return make_response(
-            jsonify(error="Internal Server Error"),
+            jsonify(
+                error=500,
+                description="Internal Server Error"
+            ),
             500
         )
 

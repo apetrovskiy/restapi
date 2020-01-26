@@ -20,12 +20,11 @@ services:
       MONGO_DBNAME: dev
       MONGO_TESTDBNAME: test
       FLASK_ENV: development
-      LOG_FILE: /dev/null
     volumes:
       - ./api:/mnt/api:ro
     command: bash -c '
         pylama &&
-        mypy --ignore-missing-imports */**/*.py &&
+        mypy --ignore-missing-imports --strict api &&
         coverage run --source api -m pytest &&
         coverage report -m  &&
         python3 -m flask run --host=0.0.0.0 -p 8080

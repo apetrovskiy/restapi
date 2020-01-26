@@ -3,17 +3,14 @@
 import json
 
 
-def test_nf_import(client, data):
-    response = client.get('/imports/100/towns/stat/percentile/age')
-    assert response.status_code == 404
-    assert json.loads(response.data) == {
-        "error": 404,
-        "description": "import doesn't exist"
-    }
-
-
-def test_expected(client, data):
+def test_nf_import(client):
     response = client.get('/imports/1/towns/stat/percentile/age')
+    assert response.status_code == 404
+    assert json.loads(response.data).get("error", None) == 404
+
+
+def test_expected(client, data3):
+    response = client.get(f'/imports/{data3}/towns/stat/percentile/age')
     assert response.status_code == 200
     assert "data" in json.loads(response.data)
     assert "p50" in json.loads(response.data)["data"][0]

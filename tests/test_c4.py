@@ -3,40 +3,15 @@
 import json
 
 
-def test_nf_import(client, data):
-    response = client.get('/imports/100/citizens/birthdays')
-    assert response.status_code == 404
-    assert json.loads(response.data) == {
-        "error": 404,
-        "description": "import doesn't exist"
-    }
-
-
-def test_expected(client, data):
+def test_nf_import(client):
     response = client.get('/imports/1/citizens/birthdays')
+    assert response.status_code == 404
+    assert json.loads(response.data).get("error", None) == 404
+
+
+def test_expected(client, data3):
+    response = client.get(f'/imports/{data3}/citizens/birthdays')
     assert response.status_code == 200
-    assert json.loads(response.data) == {
-        "data": {
-            "1": [],
-            "2": [],
-            "3": [],
-            "4": [],
-            "5": [],
-            "6": [],
-            "7": [],
-            "8": [],
-            "9": [],
-            "10": [],
-            "11": [],
-            "12": [
-                    {
-                        "citizen_id": 1,
-                        "presents": 1
-                    },
-                    {
-                        "citizen_id": 3,
-                        "presents": 1
-                    }
-                ]
-            }
-        }
+    data = json.loads(response.data).get("data", {})
+    assert set(int(s) for s in data.keys()) == set(range(1, 13))
+    assert type(data['1']) == list

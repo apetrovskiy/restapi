@@ -4,18 +4,17 @@
     ~~~~~~~~~~~~~~~~~~~
 
     .. data
-        Добавляет в тестовую базу данных данные о трех горожанах
-
-    .. more_data
-        Возвращает List[Dict[str, Any]] с 10.000 жителями.
-        Определен не в test_stress из-за проблем и импортированием
-
+        Генерирует информацию о трех горожанах в базе данных. Гарантируется,
+        что их id = [1, 2, 3], а первый находится с третьим в родственных
+        отношениях. Возвращает import_id.
 
     Функции
     ~~~~~~~
 
-    .. gen_ctzns(n: int) -> List[Dict[str, Any]]
-        Генерирует n жителей
+    .. gen_ctzns(n: int) -> List[Dict[str, Union[int, str, List[int]]]]
+        Генерирует информацию о горожанах. Гарантируется,
+        что их id = [1, 2, ... n], а первый с последним находится
+        в родственных отношениях.
 
 """
 
@@ -24,7 +23,6 @@ from typing import List, Dict, Any
 
 import pytest
 import json
-import tempfile
 
 from flask import Flask
 from flask.testing import FlaskClient, FlaskCliRunner
@@ -40,13 +38,12 @@ def app() -> Flask:
     app = create_app(config={
         'MONGO_URI': os.environ['MONGO_URI'],
         'MONGO_DBNAME': os.environ['MONGO_TESTDBNAME'],
-        'LOG_FILE': tempfile.mktemp()
     })
 
     @app.route('/exc')
-    def raise_exc() -> ZeroDivisionError:
+    def raise_exc() -> Any:
         """Для тестирования логирования"""
-        raise ZeroDivisionError("some text")
+        return 1 / 0
 
     with app.app_context():
         drop_db()
@@ -65,45 +62,41 @@ def runner(app: Flask) -> FlaskCliRunner:
 
 
 def gen_ctzns(n: int) -> List[Dict[str, Any]]:
-    """Генерирует информацию о жителях,
-    а также добавляет родственников для жителей.
-
-    Если жителей больше 10, то родственников будет только 20%.
+    """Генерирует информацию о горожанах. Гарантируется,
+    что их id = [1, 2, ... n], а первый с последним находится
+    в родственных отношениях.
 
     """
 
-    ctzns = []
-
-    if n > 10:
-        n_rels = n // 5
-    else:
-        n_rels = n
-
-    for c_id in range(1, n + 1):
-        ctzn = {
+    ctzns: List[Dict[str, Any]] = [
+        {
             "citizen_id": c_id,
-            "town": "abc",
-            "street": "abc",
-            "building": "abc",
+            "town": "Мос kwa",
+            "street": "123st",
+            "building": "5",
             "apartment": 1,
-            "name": "abc",
-            "birth_date": "12.12.2012",
+            "name": "Иванов Иван Иванович",
+            "birth_date": "17.08.2003",
             "gender": "male",
             "relatives": []
-        }
-        ctzns.append(ctzn)
+        } for c_id in range(1, n + 1)
+    ]
 
-    for c_id in range(1, n_rels + 1):
-        if n_rels + 1 == 2 * c_id:  # Удаление связи с самим собой
-            continue
-        ctzns[c_id-1]["relatives"] = [n_rels + 1 - c_id]
+    ctzns[-1]["relatives"] = [1]
+    ctzns[0]["relatives"] = [n]
 
     return ctzns
 
 
 @pytest.fixture()
-def data(client: FlaskClient) -> None:
-    client.post(
+def data3(client: FlaskClient) -> int:
+    """
+    Генерирует информацию о трех горожанах в базе данных. Гарантируется,
+    что их id = [1, 2, 3], а первый находится с третьим в родственных
+    отношениях. Возвращает import_id.
+
+    """
+    response = client.post(
         '/imports',
         data=json.dumps(
             {
@@ -112,7 +105,4 @@ def data(client: FlaskClient) -> None:
         content_type='application/json'
     )
 
-
-@pytest.fixture()
-def more_data() -> List[Dict[str, Any]]:
-    return gen_ctzns(10 ** 4)
+    return json.loads(response.data)["data"]["import_id"]

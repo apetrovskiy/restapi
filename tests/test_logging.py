@@ -3,12 +3,15 @@
 import json
 
 
-def test_500(client, app):
+def test_logging(client, caplog):
     response = client.get('/exc')
+
     assert response.status_code == 500
     assert json.loads(response.data) == {
-        "error": "Internal Server Error"
+        "error": 500,
+        "description": "Internal Server Error"
     }
 
-    with open(app.config["LOG_FILE"], 'r') as log:
-        assert "ZeroDivisionError: some text" in log.read()
+    for record in caplog.records:
+        assert record.levelname == "ERROR"
+    assert "division by zero" in caplog.text
