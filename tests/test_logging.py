@@ -12,6 +12,5 @@ def test_logging(client, caplog):
         "description": "Internal Server Error"
     }
 
-    for record in caplog.records:
-        assert record.levelname == "ERROR"
+    assert any(record.levelname == "ERROR" for record in caplog.records)
     assert "division by zero" in caplog.text
