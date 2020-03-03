@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import json
+from bson import ObjectId
 
 
 def test_nf_import(client):
-    response = client.get('/imports/1/citizens')
+    response = client.get(f'/imports/{str(ObjectId())}/citizens')
     assert response.status_code == 404
     assert json.loads(response.data).get("error", None) == 404
 

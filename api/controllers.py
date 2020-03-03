@@ -4,95 +4,125 @@
     ~~~~~~~~~~~~~~~~~~
 
     .. POST /imports
-        post_imp() -> Response
+        import_citizens()
 
     .. PATCH /imports/$import_id/citizens/$citizen_id
-        patch_ctzn(import_id: int, citizen_id: int) -> Response
+        patch_citizen(import_id: str, citizen_id: int)
 
     .. GET /imports/$import_id/citizens
-        get_ctzns(import_id: int) -> Response
+        get_citizen(import_id: str)
 
     .. GET /imports/$import_id/citizens/birthdays
-        get_birthdays(import_id: int) -> Response
+        get_birthdays(import_id: str)
 
     .. GET /imports/$import_id/towns/stat/percentile/age
-        get_age_stat(import_id: int) -> Response
+        get_age_stat(import_id: str)
 
 """
+from typing import Any
 
-from datetime import datetime, date
-from typing import Dict, List, Any
+from flask import Blueprint, request, jsonify, abort
 
-from flask import Blueprint, request, jsonify, abort, make_response
-from numpy import percentile
-
-from api.orm import CtznsDAO
-from api.validation import NotFound, ValidationError
-
+from api.mongo_orm import create, read, update, ConnectionFailure
+from api.functions import calc_birthdays, calc_age_by_towns
+from api.citizen_schema import (
+    NotFound, ValidationError, validate_import_citizens, update_citizens,
+    CitizenSchema
+)
 
 __all__ = ["bp"]
 
 bp = Blueprint('controllers', __name__)
-dao = CtznsDAO()
 
 
 @bp.route('', methods=['POST'])
-def post_imp() -> Any:
+def import_citizens() -> Any:
     """Принимает на вход набор с данными о жителях в формате json и
     сохраняет его с уникальным идентификатором import_id.
 
     """
+    try:
+        citizens_data = request.get_json().get("citizens")
+    except KeyError:
+        raise abort(400, 'Import must contain "citizens" field')
 
     try:
-        imp_id = dao.create(request.get_json())
+        citizens_data = validate_import_citizens(citizens_data)
 
     except ValidationError as ve:
         return abort(400, str(ve))
 
-    return make_response(
-        jsonify({"data": {"import_id": imp_id}}),
-        201
-    )
+    try:
+        import_id = create(citizens_data)
+    except ConnectionFailure:
+        return abort(500)
+
+    response = {
+        "data": {
+            "import_id": import_id,
+        }
+    }
+
+    return jsonify(response), 201
 
 
-@bp.route('/<int:imp_id>/citizens/<int:ctzn_id>', methods=['PATCH'])
-def patch_ctzn(imp_id: int, ctzn_id: int) -> Any:
+@bp.route('/<string:import_id>/citizens/<int:citizen_id>', methods=['PATCH'])
+def patch_citizen(import_id: str, citizen_id: int) -> Any:
     """Изменяет информацию о жителе в указанном наборе данных."""
 
-    new_fields = request.get_json()
+    fields = request.get_json()
     try:
-        ctzn = dao.update(imp_id, ctzn_id, new_fields)
+        citizens = read(import_id)
 
-    except NotFound as ve:
-        return abort(404, str(ve))
+    except ConnectionFailure:
+        return abort(500)
+
+    except NotFound as nf:
+        return abort(404, str(nf))
+
+    try:
+        different_citizens = update_citizens(citizens, citizen_id, fields)
+
+    except NotFound as nf:
+        return abort(404, str(nf))
 
     except ValidationError as ve:
         return abort(400, str(ve))
 
-    return make_response(
-        jsonify({"data": ctzn}),
-        200
-    )
+    try:
+        update(import_id, different_citizens)
+    except ConnectionFailure:
+        return abort(500)
+
+    response = {
+        "data": CitizenSchema().dump(different_citizens[citizen_id])
+    }
+
+    return jsonify(response), 200
 
 
-@bp.route('/<int:imp_id>/citizens', methods=['GET'])
-def get_ctzns(imp_id: int) -> Any:
+@bp.route('/<string:import_id>/citizens', methods=['GET'])
+def get_citizens(import_id: str) -> Any:
     """Возвращает список всех жителей для указанного набора данных."""
 
     try:
-        ctzns = dao.read(imp_id)
+        citizens_data = read(import_id)
 
-    except NotFound as ve:
-        return abort(404, str(ve))
+    except ConnectionFailure:
+        return abort(500)
 
-    return make_response(
-        jsonify({"data": list(ctzns.values())}),
-        200
-    )
+    except NotFound as nf:
+        return abort(404, str(nf))
+
+    response = {
+        "data": CitizenSchema().dump(citizens_data.values(), many=True)
+    }
+
+    return jsonify(response), 200
 
 
-@bp.route('/<int:imp_id>/citizens/birthdays', methods=['GET'])
-def get_birthdays(imp_id: int) -> Any:
+@bp.route('/<string:import_id>/citizens/birthdays', methods=['GET'])
+def get_birthdays(import_id: str) -> Any:
     """Возвращает жителей и количество подарков, которые они будут
     покупать своим ближайшим родственникам (1-го порядка),
     сгруппированных по месяцам из указанного набора данных.
@@ -100,42 +130,23 @@ def get_birthdays(imp_id: int) -> Any:
     """
 
     try:
-        ctzns = dao.read(imp_id)
+        citizens_data = read(import_id)
 
-    except NotFound as ve:
-        return abort(404, str(ve))
+    except ConnectionFailure:
+        return abort(500)
 
-    months: Dict[str, Dict[int, Dict[str, int]]] = dict(
-        (str(i), {})
-        for i in range(1, 12 + 1)
-    )
+    except NotFound as nf:
+        return abort(404, str(nf))
 
-    for ctzn_id, ctzn in ctzns.items():
-        for rel_id in ctzn["relatives"]:
-            rel = ctzns[str(rel_id)]
-            month = rel["birth_date"].split('.')[1]
-            month = month.lstrip("0")
-            no_presents = {
-                "citizen_id": int(ctzn_id), "presents": 0
-            }
-            c = months[month].get(int(ctzn_id), no_presents)
-            c["presents"] += 1
-            months[month][int(ctzn_id)] = c
+    response = {
+        "data": calc_birthdays(citizens_data)
+    }
 
-    return make_response(
-        jsonify({"data": dict(
-            (
-                str(i),
-                list(months[str(i)].values())
-            )
-            for i in range(1, 12 + 1)
-        )}),
-        200
-    )
+    return jsonify(response), 200
 
 
-@bp.route('/<int:imp_id>/towns/stat/percentile/age', methods=['GET'])
-def get_age_stat(imp_id: int) -> Any:
+@bp.route('/<string:import_id>/towns/stat/percentile/age', methods=['GET'])
+def get_age_stat(import_id: str) -> Any:
     """Возвращает статистику по городам для указанного набора данных в
     разрезе возраста (полных лет) жителей: p50, p75, p99, где число -
     это значение перцентиля.
@@ -146,40 +157,16 @@ def get_age_stat(imp_id: int) -> Any:
     """
 
     try:
-        ctzns = dao.read(imp_id)
+        citizens_data = read(import_id)
 
-    except NotFound as ve:
-        return abort(404, str(ve))
+    except ConnectionFailure:
+        return abort(500)
 
-    towns: Dict[str, List[int]] = {}
+    except NotFound as nf:
+        return abort(404, str(nf))
 
-    for ctzn in ctzns.values():
-        birth_date = datetime.strptime(ctzn["birth_date"], "%d.%m.%Y")
-        today = date.today()
-        if (today.month, today.day) < (birth_date.month, birth_date.day):
-            was_already = False
-        else:
-            was_already = True
-        age = today.year - birth_date.year - int(not was_already)
+    response = {
+        "data": calc_age_by_towns(citizens_data)
+    }
 
-        town = ctzn["town"]
-        ages = towns.get(town, [])
-        ages.append(age)
-        towns[town] = ages
-
-    stats = []
-
-    for town in towns:
-        stat = {"town": town}
-
-        for pv in (50, 75, 99):
-            stat["p" + str(pv)] = round(
-                percentile(towns[town], pv, interpolation='linear'), 2
-            )
-
-        stats.append(stat)
-
-    return make_response(
-        jsonify({"data": stats}),
-        200
-    )
+    return jsonify(response), 200

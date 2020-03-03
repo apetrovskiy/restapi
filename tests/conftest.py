@@ -28,7 +28,7 @@ from flask import Flask
 from flask.testing import FlaskClient, FlaskCliRunner
 
 from api import create_app
-from api.db import drop_db
+from api.mongo_orm import drop_db
 
 __all__ = ["gen_ctzns"]
 

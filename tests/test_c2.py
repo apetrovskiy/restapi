@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+from bson import ObjectId
 
 
 def test_empty_json(client, data3):
@@ -15,7 +16,7 @@ def test_empty_json(client, data3):
 
 def test_nf_import(client):
     response = client.patch(
-        '/imports/1/citizens/3',
+        f'/imports/{str(ObjectId())}/citizens/3',
         data=json.dumps(
             {"name": "Иванова Мария Леонидовна"}),
         content_type='application/json'

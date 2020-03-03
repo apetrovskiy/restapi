@@ -6,20 +6,17 @@
     Структура
     ~~~~~~~~~
 
-    .. api.db
-        Подключение базы данных
-
-    .. api.validation
-        Валидация данных
-
-    .. api.orm
-        Обертка для pymongo
+    .. api.citizen_schema
+        Валидация данных и модели
 
     .. api.controllers
         Реализация обработчиков
 
-    .. citizen_schema.py
-        Схема для валидации данных в обработчиках
+    .. api.functions
+        Функции для работы с данными
+
+    .. api.mongo_orm
+        Обертка для pymongo и CRUD
 
     Конфигурирование
     ~~~~~~~~~~~~~~~~
@@ -32,10 +29,13 @@
     .. MONGO_DBNAME
         Имя основной базы данных
 
+    .. MONGO_TESTDBNAME
+        Имя базы данных, создающаейся во время тестов
+
     Функции
     ~~~~~~~
 
-    .. create_app(config: Optional[dict] = None) -> Flask
+    .. create_app(config: Optional[Dict[str, str] = None) -> Flask
         Инициализирует поток приложения
 
 """
@@ -74,6 +74,7 @@ def create_app(config: Optional[Dict[str, str]] = None) -> Flask:
             ex.code
         )
 
+    @app.errorhandler(500)
     @app.errorhandler(Exception)
     def _handle_unexpected_error(exc: Exception) -> Any:
         app.logger.error(traceback.format_exc())
@@ -85,8 +86,8 @@ def create_app(config: Optional[Dict[str, str]] = None) -> Flask:
             500
         )
 
-    from . import db
-    db.init_app(app)
+    from . import mongo_orm
+    mongo_orm.init_app(app)
 
     from . import controllers
     app.register_blueprint(controllers.bp, url_prefix='/imports')

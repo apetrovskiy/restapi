@@ -3,7 +3,7 @@
 import pytest
 from marshmallow import ValidationError
 
-from api.validation import validate_import_citizens, validate_patch_citizen
+from api.citizen_schema import validate_import_citizens, update_citizens
 
 
 @pytest.mark.parametrize("data", [
@@ -89,9 +89,8 @@ def test_fields_errors(data: dict):
 
     flds = data["citizens"][0]
     ctzn_id = flds.copy().pop("citizen_id")
-    data = {str(ctzn_id): flds}
     with pytest.raises(ValidationError):
-        validate_patch_citizen(data, ctzn_id, flds)
+        update_citizens({}, ctzn_id, flds)
 
 
 @pytest.mark.parametrize("data", [
