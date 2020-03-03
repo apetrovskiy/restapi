@@ -44,6 +44,7 @@ import os
 import traceback
 
 from flask import Flask, jsonify, make_response
+from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 from typing import Optional, Dict, Any
 
@@ -89,5 +90,11 @@ def create_app(config: Optional[Dict[str, str]] = None) -> Flask:
 
     from . import controllers
     app.register_blueprint(controllers.bp, url_prefix='/imports')
+
+    CORS(app, resources={
+        r"/imports*": {
+            "origins": "*"
+        }
+    })
 
     return app
