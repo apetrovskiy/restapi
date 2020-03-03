@@ -21,6 +21,7 @@
 """
 from typing import Any
 
+import bson
 from flask import Blueprint, request, jsonify, abort
 
 from api.mongo_orm import create, read, update, ConnectionFailure
@@ -74,6 +75,9 @@ def patch_citizen(import_id: str, citizen_id: int) -> Any:
     try:
         citizens = read(import_id)
 
+    except bson.errors.InvalidId as ii:
+        return abort(400, str(ii))
+
     except ConnectionFailure:
         return abort(500)
 
@@ -108,6 +112,9 @@ def get_citizens(import_id: str) -> Any:
     try:
         citizens_data = read(import_id)
 
+    except bson.errors.InvalidId as ii:
+        return abort(400, str(ii))
+
     except ConnectionFailure:
         return abort(500)
 
@@ -131,6 +138,9 @@ def get_birthdays(import_id: str) -> Any:
 
     try:
         citizens_data = read(import_id)
+
+    except bson.errors.InvalidId as ii:
+        return abort(400, str(ii))
 
     except ConnectionFailure:
         return abort(500)
@@ -158,6 +168,9 @@ def get_age_stat(import_id: str) -> Any:
 
     try:
         citizens_data = read(import_id)
+
+    except bson.errors.InvalidId as ii:
+        return abort(400, str(ii))
 
     except ConnectionFailure:
         return abort(500)
