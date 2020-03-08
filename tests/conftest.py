@@ -1,40 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-    Фикстуры для тестов
-    ~~~~~~~~~~~~~~~~~~~
-
-    .. data
-        Генерирует информацию о трех горожанах в базе данных. Гарантируется,
-        что их id = [1, 2, 3], а первый находится с третьим в родственных
-        отношениях. Возвращает import_id.
-
-    Функции
-    ~~~~~~~
-
-    .. gen_ctzns(n: int) -> List[Dict[str, Union[int, str, List[int]]]]
-        Генерирует информацию о горожанах. Гарантируется,
-        что их id = [1, 2, ... n], а первый с последним находится
-        в родственных отношениях.
-
-"""
 
 import os
-from typing import List, Dict, Any
+from typing import Any, Mapping, Iterable
 
 import pytest
-import json
 
 from flask import Flask
-from flask.testing import FlaskClient, FlaskCliRunner
+from pytest import fixture
 
 from api import create_app
+from api.citizen_schema import validate_import_citizens, Citizen
 from api.mongo_orm import drop_db
 
-__all__ = ["gen_ctzns"]
+
+from tests import Citizen_s
 
 
 @pytest.fixture()
-def app() -> Flask:
+def app() -> Any:
     app = create_app(config={
         'MONGO_URI': os.environ['MONGO_URI'],
         'MONGO_DBNAME': os.environ['MONGO_TESTDBNAME'],
@@ -52,57 +35,54 @@ def app() -> Flask:
 
 
 @pytest.fixture()
-def client(app: Flask) -> FlaskClient:
+def client(app: Flask) -> Any:
     return app.test_client()
 
 
 @pytest.fixture()
-def runner(app: Flask) -> FlaskCliRunner:
+def runner(app: Flask) -> Any:
     return app.test_cli_runner()
 
 
-def gen_ctzns(n: int) -> List[Dict[str, Any]]:
-    """Генерирует информацию о горожанах. Гарантируется,
-    что их id = [1, 2, ... n], а первый с последним находится
-    в родственных отношениях.
-
-    """
-
-    ctzns: List[Dict[str, Any]] = [
+@pytest.fixture()
+def data3(client: fixture) -> Iterable[Citizen_s]:
+    return [
         {
-            "citizen_id": c_id,
-            "town": "Мос kwa",
-            "street": "123st",
-            "building": "5",
-            "apartment": 1,
+            "citizen_id": 1,
+            "town": "Москва",
+            "street": "Льва Толстого",
+            "building": "16к7стр5",
+            "apartment": 7,
             "name": "Иванов Иван Иванович",
-            "birth_date": "17.08.2003",
+            "birth_date": "26.12.1986",
             "gender": "male",
+            "relatives": [2]
+        },
+        {
+            "citizen_id": 2,
+            "town": "Москва",
+            "street": "Льва Толстого",
+            "building": "16к7стр5",
+            "apartment": 7,
+            "name": "Иванов Сергей Иванович",
+            "birth_date": "17.04.1997",
+            "gender": "male",
+            "relatives": [1]
+        },
+        {
+            "citizen_id": 3,
+            "town": "Керчь",
+            "street": "Иосифа Бродского",
+            "building": "2",
+            "apartment": 11,
+            "name": "Романова Мария Леонидовна",
+            "birth_date": "23.11.1986",
+            "gender": "female",
             "relatives": []
-        } for c_id in range(1, n + 1)
+        }
     ]
-
-    ctzns[-1]["relatives"] = [1]
-    ctzns[0]["relatives"] = [n]
-
-    return ctzns
 
 
 @pytest.fixture()
-def data3(client: FlaskClient) -> int:
-    """
-    Генерирует информацию о трех горожанах в базе данных. Гарантируется,
-    что их id = [1, 2, 3], а первый находится с третьим в родственных
-    отношениях. Возвращает import_id.
-
-    """
-    response = client.post(
-        '/imports',
-        data=json.dumps(
-            {
-                "citizens": gen_ctzns(3)
-            }),
-        content_type='application/json'
-    )
-
-    return json.loads(response.data)["data"]["import_id"]
+def data3d(data3: Citizen_s) -> Mapping[int, Citizen]:
+    return validate_import_citizens(data3)

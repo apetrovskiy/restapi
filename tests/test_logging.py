@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import json
+from pytest import fixture
 
 
-def test_logging(client, caplog):
+def test_logging(client: fixture, caplog: fixture) -> None:
     response = client.get('/exc')
 
     assert response.status_code == 500

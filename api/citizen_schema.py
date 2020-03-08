@@ -8,8 +8,11 @@ from marshmallow import (
     Schema, fields, validate, post_load, RAISE, ValidationError
 )
 
-__all__ = ["NotFound", "ValidationError", "validate_import_citizens",
-           "update_citizens", "CitizenSchema", "unique_items", "Citizen"]
+__all__ = [
+    "NotFound", "ValidationError", "validate_import_citizens",
+    "update_citizens", "CitizenSchema", "unique_items", "Citizen",
+    "update_relatives"
+]
 
 
 def isalnum(s: str) -> bool:

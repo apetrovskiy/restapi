@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
+from typing import Mapping, Sequence
 
 import pytest
 from marshmallow import ValidationError
 
 from api.citizen_schema import validate_import_citizens, update_citizens
+from tests import Citizen_s
 
 
 @pytest.mark.parametrize("data", [
@@ -11,7 +13,7 @@ from api.citizen_schema import validate_import_citizens, update_citizens
         "citizens": [
             {
                 "citizen_id": 1,
-                "town": "М" * 257,
+                "town": "М" * 257,  # Length
                 "street": "Льва Толстого",
                 "building": "16к7стр5",
                 "apartment": 7,
@@ -26,7 +28,7 @@ from api.citizen_schema import validate_import_citizens, update_citizens
         "citizens": [
             {
                 "citizen_id": 1,
-                "town": "_",
+                "town": "_",  # Not alnum
                 "street": "Льва Толстого",
                 "building": "16к7стр5",
                 "apartment": 7,
@@ -46,7 +48,7 @@ from api.citizen_schema import validate_import_citizens, update_citizens
                 "building": "16к7стр5",
                 "apartment": 7,
                 "name": "Иванов Иван Иванович",
-                "birth_date": "31.02.1986",
+                "birth_date": "31.02.1986",  # Invalid day and month pair
                 "gender": "male",
                 "relatives": []
             }
@@ -61,7 +63,7 @@ from api.citizen_schema import validate_import_citizens, update_citizens
                 "building": "16к7стр5",
                 "apartment": 7,
                 "name": "Иванов Иван Иванович",
-                "birth_date": "01.01.9000",
+                "birth_date": "01.01.9000",  # Invalid year
                 "gender": "male",
                 "relatives": []
             }
@@ -76,21 +78,23 @@ from api.citizen_schema import validate_import_citizens, update_citizens
                 "building": "16к7стр5",
                 "apartment": 7,
                 "name": "Иванов Иван Иванович",
-                "birth_date": "26.13.1986",
+                "birth_date": "26.13.1986",  # Invalid month
                 "gender": "male",
                 "relatives": []
             }
         ]
     }
 ])
-def test_fields_errors(data: dict):
+def test_fields_errors(data: Mapping[str, Sequence[Citizen_s]]) -> None:
     with pytest.raises(ValidationError):
         validate_import_citizens(data)
 
-    flds = data["citizens"][0]
-    ctzn_id = flds.copy().pop("citizen_id")
+    fields = data["citizens"][0]
+    fields.pop("citizen_id")
+
     with pytest.raises(ValidationError):
-        update_citizens({}, ctzn_id, flds)
+        # Препдолагается, что функция update_citizens сначала проверяет fields
+        update_citizens({}, 1, fields)
 
 
 @pytest.mark.parametrize("data", [
@@ -105,7 +109,7 @@ def test_fields_errors(data: dict):
                 "name": "Иванов Иван Иванович",
                 "birth_date": "26.12.1986",
                 "gender": "male",
-                "relatives": []
+                "relatives": []  # Invalid relatives
             },
             {
                 "citizen_id": 2,
@@ -123,7 +127,7 @@ def test_fields_errors(data: dict):
     {
         "citizens": [
             {
-                "citizen_id": 1,
+                "citizen_id": 1,  # Not unique citizen ids
                 "town": "Москва",
                 "street": "Льва Толстого",
                 "building": "16к7стр5",
@@ -147,6 +151,8 @@ def test_fields_errors(data: dict):
         ]
     }
 ])
-def test_relatives_and_ids_errors(data: dict):
+def test_relatives_and_ids_errors(
+        data: Mapping[str, Sequence[Citizen_s]]
+) -> None:
     with pytest.raises(ValidationError):
         validate_import_citizens(data)
