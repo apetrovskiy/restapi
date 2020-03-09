@@ -6,7 +6,6 @@ from typing import Any, Mapping, Iterable
 import pytest
 
 from flask import Flask
-from pytest import fixture
 
 from api import create_app
 from api.citizen_schema import validate_import_citizens, Citizen
@@ -45,7 +44,7 @@ def runner(app: Flask) -> Any:
 
 
 @pytest.fixture()
-def data3(client: fixture) -> Iterable[Citizen_s]:
+def data3() -> Iterable[Citizen_s]:
     return [
         {
             "citizen_id": 1,
