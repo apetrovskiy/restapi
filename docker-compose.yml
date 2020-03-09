@@ -10,7 +10,7 @@ services:
   dev:
     build:
       context: .
-      target: dev
+      target: dev  # Or prod for testing production version
     ports:
       - "8080:8080"
     depends_on:
@@ -19,13 +19,5 @@ services:
       MONGO_URI: mongodb://me:hackme@mongo/
       MONGO_DBNAME: dev
       MONGO_TESTDBNAME: test
-      FLASK_ENV: development
     volumes:
-      - ./api:/mnt/api:ro
-    command: bash -c '
-        pylama &&
-        mypy --ignore-missing-imports api tests &&
-        coverage run --source api -m pytest &&
-        coverage report -m  &&
-        python3 -m flask run --host=0.0.0.0 -p 8080
-      '
+      - ./api:/opt/restapi/api:ro
