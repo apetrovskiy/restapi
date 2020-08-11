@@ -80,3 +80,13 @@ env MONGO_DBNAME="dev"                               \
 env FLASK_APP="api"                                  \
 python -m flask drop-db
 ```
+
+# Деплой на Heroku
+
+Необходимые для деплоя файлы могут быть получены с помощью следующих комманд
+
+```shell script
+echo 'python-3.8.5' > runtime.txt
+poetry export -f requirements.txt -o requirements.txt
+echo 'web gunicorn "api:create_app()"' > Procfile
+```
