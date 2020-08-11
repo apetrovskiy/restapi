@@ -23,81 +23,60 @@
 
 # Запуск сервера для разработки
 
-(Автоматически запускает линтер и тесты)
-
-## Docker-compose
+Развернуть базу данных mongodb (например с помощью docker)
 
 ```shell script
-docker-compose up --build --abort-on-container-exit
+docker run                                \
+--env MONGO_INITDB_ROOT_USERNAME="me"     \
+--env MONGO_INITDB_ROOT_PASSWORD="hackme" \
+--name "restapi_dev"                      \
+-d                                        \
+-p 27017:27017                            \
+mongo:4.4.0-bionic
 ```
 
-## Docker
+Склонировать репозиторий
 
 ```shell script
-docker build . --target dev -t restapi
-docker run -p 8080:8080 \
---env MONGO_URI="Uri of your mongodb base" \
---env MONGO_DBNAME="Name of database" \
---env MONGO_TESTDBNAME="Name of database for tests. It will be dropped after the tests" \
--v $(pwd)/api:/opt/restapi/api:ro \
-restapi
+git clone git@github.com:egorchistov/restapi.git
+
+cd restapi
 ```
 
-## Вручную
+Установить зависимости
 
 ```shell script
-export FLASK_APP=api
-export FLASK_ENV=development
-export MONGO_URI="Uri of your mongodb base"
-export MONGO_DBNAME="Name of database"
-export MONGO_TESTDBNAME="Name of database for tests. It will be dropped after the tests"
-
-python -m venv venv
-. ./venv/bin/activate
-pip install -r requirements.txt -r requirements.tests.txt
-
-pylama
-mypy --ignore-missing-imports api tests
-coverage run --source api -m pytest && coverage report -m
-python -m flask run --host=0.0.0.0 -p 8080
+poetry install
+poetry shell
 ```
 
-# Cброс базы данных
-
-## Docker
+Запустить сервер для разработки
 
 ```shell script
-docker exec restapi_dev_1 python -m flask drop-db
-```
-`restapi_dev_1` - имя контейнера с приложением
-
-## Локально
-
-```shell script
-python -m flask drop-db
-```
-
-# Деплой
-
-## Docker
-
-```shell script
-docker build . --target prod -t restapi
-docker run -p 8080:8080 \
---env MONGO_URI="Uri of your mongodb base" \
---env MONGO_DBNAME="Name of database" \
-restapi
-```
-
-## Вручную
-
-```shell script
-export MONGO_URI="Uri of your mongodb base"
-export MONGO_DBNAME="Name of database"
-
-python -m venv venv
-. ./venv/bin/activate
-pip install -r requirements.txt
-
+env MONGO_URI="mongodb://me:hackme@localhost:27017/" \
+env MONGO_DBNAME="dev"                               \
 gunicorn "api:create_app()"
+```
+
+Тесты и инструменты для анализа кода
+
+```shell script
+flake8
+
+mypy --ignore-missing-imports .
+
+env MONGO_URI="mongodb://me:hackme@localhost:27017/" \
+env MONGO_TESTDBNAME="test"                          \
+coverage run --source api -m pytest
+
+coverage report -m
+```
+
+При необходимости можно очистить базу данных от записей
+
+```shell script
+env MONGO_URI="mongodb://me:hackme@localhost:27017/" \
+env MONGO_DBNAME="dev"                               \
+env FLASK_APP="api"                                  \
+python -m flask drop-db
 ```

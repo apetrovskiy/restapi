@@ -4,12 +4,15 @@ import json
 from typing import Iterable
 
 from bson import ObjectId
-from pytest import fixture
+from flask.testing import FlaskClient
 
 from tests import import_id, Citizen_s
 
 
-def test_import_citizens(client: fixture, data3: Iterable[Citizen_s]) -> None:
+def test_import_citizens(
+        client: FlaskClient,
+        data3: Iterable[Citizen_s]
+) -> None:
     post_response = client.post(
         '/imports',
         data=json.dumps({
@@ -22,7 +25,10 @@ def test_import_citizens(client: fixture, data3: Iterable[Citizen_s]) -> None:
     assert ObjectId.is_valid(import_id(post_response))
 
 
-def test_patch_citizen(client: fixture, data3: Iterable[Citizen_s]) -> None:
+def test_patch_citizen(
+        client: FlaskClient,
+        data3: Iterable[Citizen_s]
+) -> None:
     post_response = client.post(
         '/imports',
         data=json.dumps({
@@ -60,7 +66,10 @@ def test_patch_citizen(client: fixture, data3: Iterable[Citizen_s]) -> None:
     }
 
 
-def test_get_citizens(client: fixture, data3: Iterable[Citizen_s]) -> None:
+def test_get_citizens(
+        client: FlaskClient,
+        data3: Iterable[Citizen_s]
+) -> None:
     post_response = client.post(
         '/imports',
         data=json.dumps({
@@ -78,7 +87,10 @@ def test_get_citizens(client: fixture, data3: Iterable[Citizen_s]) -> None:
     }
 
 
-def test_get_birthdays(client: fixture, data3: Iterable[Citizen_s]) -> None:
+def test_get_birthdays(
+        client: FlaskClient,
+        data3: Iterable[Citizen_s]
+) -> None:
     post_response = client.post(
         '/imports',
         data=json.dumps({
@@ -109,7 +121,10 @@ def test_get_birthdays(client: fixture, data3: Iterable[Citizen_s]) -> None:
     }
 
 
-def test_get_age_stat(client: fixture, data3: Iterable[Citizen_s]) -> None:
+def test_get_age_stat(
+        client: FlaskClient,
+        data3: Iterable[Citizen_s]
+) -> None:
     post_response = client.post(
         '/imports',
         data=json.dumps({

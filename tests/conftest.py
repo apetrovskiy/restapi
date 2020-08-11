@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
-from typing import Any, Mapping, Iterable
+from typing import Any, Mapping, Iterable, Generator
 
 import pytest
 
 from flask import Flask
+from flask.testing import FlaskClient, FlaskCliRunner
 
 from api import create_app
 from api.citizen_schema import validate_import_citizens, Citizen
@@ -16,7 +17,7 @@ from tests import Citizen_s
 
 
 @pytest.fixture()
-def app() -> Any:
+def app() -> Generator[Flask, None, None]:
     app = create_app(config={
         'MONGO_URI': os.environ['MONGO_URI'],
         'MONGO_DBNAME': os.environ['MONGO_TESTDBNAME'],
@@ -34,12 +35,12 @@ def app() -> Any:
 
 
 @pytest.fixture()
-def client(app: Flask) -> Any:
+def client(app: Flask) -> FlaskClient:
     return app.test_client()
 
 
 @pytest.fixture()
-def runner(app: Flask) -> Any:
+def runner(app: Flask) -> FlaskCliRunner:
     return app.test_cli_runner()
 
 

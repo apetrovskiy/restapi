@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import json
-from pytest import fixture
+
+from _pytest.logging import LogCaptureFixture
+from flask.testing import FlaskClient
 
 
-def test_logging(client: fixture, caplog: fixture) -> None:
+def test_logging(client: FlaskClient, caplog: LogCaptureFixture) -> None:
     response = client.get('/exc')
 
     assert response.status_code == 500

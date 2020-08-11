@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from pytest import fixture
+from _pytest.monkeypatch import MonkeyPatch
+from flask.testing import FlaskCliRunner
 
 
-def test_drop_db_command(runner: fixture, monkeypatch: fixture) -> None:
+def test_drop_db_command(
+        runner: FlaskCliRunner,
+        monkeypatch: MonkeyPatch
+) -> None:
     class Recorder:
         called = False
 
