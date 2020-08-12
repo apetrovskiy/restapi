@@ -1,27 +1,29 @@
-from typing import Mapping
-
 import pytest
 
+from api.schema import CitizenId
 from tests import change_relatives_to
-from api.citizen_schema import ValidationError, Citizen
 
 
-def test_add_relatives(data3d: Mapping[int, Citizen]) -> None:
-    citizens = change_relatives_to(data3d, 3, [1, 2])
+def test_add_relatives(pretty_citizens):
+    citizens = change_relatives_to(
+        pretty_citizens,
+        CitizenId(3),
+        [CitizenId(1), CitizenId(2)]
+    )
 
-    assert citizens[1].relatives == [2, 3]
-    assert citizens[2].relatives == [1, 3]
-    assert 3 not in citizens.keys()
+    assert citizens[CitizenId(1)].relatives == [2, 3]
+    assert citizens[CitizenId(2)].relatives == [1, 3]
+    assert CitizenId(3) not in citizens.keys()
 
 
-def test_rem_relatives(data3d: Mapping[int, Citizen]) -> None:
-    citizens = change_relatives_to(data3d, 1, [])
+def test_rem_relatives(pretty_citizens):
+    citizens = change_relatives_to(pretty_citizens, CitizenId(1), [])
 
     assert 1 not in citizens.keys()
-    assert citizens[2].relatives == []
+    assert citizens[CitizenId(2)].relatives == []
     assert 3 not in citizens.keys()
 
 
-def test_unexisted_relative(data3d: Mapping[int, Citizen]) -> None:
-    with pytest.raises(ValidationError):
-        change_relatives_to(data3d, 1, [42])
+def test_unexisted_relative(pretty_citizens):
+    with pytest.raises(ValueError):
+        change_relatives_to(pretty_citizens, CitizenId(1), [CitizenId(42)])

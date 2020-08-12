@@ -1,58 +1,31 @@
-# -*- coding: utf-8 -*-
-
-import json
-from typing import Iterable
-
 from bson import ObjectId
-from flask.testing import FlaskClient
+from fastapi.testclient import TestClient
 
-from tests import import_id, Citizen_s
+from api import app
+from tests import import_id
 
-
-def test_import_citizens(
-        client: FlaskClient,
-        data3: Iterable[Citizen_s]
-) -> None:
-    post_response = client.post(
-        '/imports',
-        data=json.dumps({
-            "citizens": data3
-        }),
-        content_type='application/json'
-    )
-
-    assert post_response.status_code == 201
-    assert ObjectId.is_valid(import_id(post_response))
+client = TestClient(app)
 
 
-def test_patch_citizen(
-        client: FlaskClient,
-        data3: Iterable[Citizen_s]
-) -> None:
-    post_response = client.post(
-        '/imports',
-        data=json.dumps({
-            "citizens": data3
-        }),
-        content_type='application/json'
-    )
+def test_import_citizens(post):
+    assert post.status_code == 201
+    assert ObjectId.is_valid(import_id(post))
 
+
+def test_patch_citizen(post):
     patch_response = client.patch(
-        f'/imports/{import_id(post_response)}/citizens/3',
-        data=json.dumps(
-            {
-                "name": "Иванова Мария Леонидовна",
-                "town": "Москва",
-                "street": "Льва Толстого",
-                "building": "16к7стр5",
-                "apartment": 7,
-                "relatives": [1]
-            }
-        ),
-        content_type='application/json'
+        f'/imports/{import_id(post)}/citizens/3',
+        json={
+            "name": "Иванова Мария Леонидовна",
+            "town": "Москва",
+            "street": "Льва Толстого",
+            "building": "16к7стр5",
+            "apartment": 7,
+            "relatives": [1]
+        }
     )
     assert patch_response.status_code == 200
-    assert json.loads(patch_response.data).get("data", {}) == {
+    assert patch_response.json().get("data", {}) == {
         "citizen_id": 3,
         "town": "Москва",
         "street": "Льва Толстого",
@@ -62,48 +35,23 @@ def test_patch_citizen(
         "birth_date": "23.11.1986",
         "gender": "female",
         "relatives": [1]
-
     }
 
 
-def test_get_citizens(
-        client: FlaskClient,
-        data3: Iterable[Citizen_s]
-) -> None:
-    post_response = client.post(
-        '/imports',
-        data=json.dumps({
-            "citizens": data3
-        }),
-        content_type='application/json'
-    )
-
+def test_get_citizens(post, import_example):
     get_response = client.get(
-        f'/imports/{import_id(post_response)}/citizens'
+        f'/imports/{import_id(post)}/citizens'
     )
     assert get_response.status_code == 200
-    assert json.loads(get_response.data) == {
-        "data": data3
-    }
+    assert get_response.json()["data"] == import_example["citizens"]
 
 
-def test_get_birthdays(
-        client: FlaskClient,
-        data3: Iterable[Citizen_s]
-) -> None:
-    post_response = client.post(
-        '/imports',
-        data=json.dumps({
-            "citizens": data3
-        }),
-        content_type='application/json'
-    )
-
+def test_get_birthdays(post):
     get_response = client.get(
-        f'/imports/{import_id(post_response)}/citizens/birthdays'
+        f'/imports/{import_id(post)}/citizens/birthdays'
     )
     assert get_response.status_code == 200
-    assert json.loads(get_response.data) == {
+    assert get_response.json() == {
         "data": {
             "1": [],
             "2": [],
@@ -121,20 +69,9 @@ def test_get_birthdays(
     }
 
 
-def test_get_age_stat(
-        client: FlaskClient,
-        data3: Iterable[Citizen_s]
-) -> None:
-    post_response = client.post(
-        '/imports',
-        data=json.dumps({
-            "citizens": data3
-        }),
-        content_type='application/json'
-    )
-
+def test_get_age_stat(post):
     get_response = client.get(
-        f'/imports/{import_id(post_response)}/towns/stat/percentile/age'
+        f'/imports/{import_id(post)}/towns/stat/percentile/age'
     )
 
     assert get_response.status_code == 200
@@ -142,4 +79,4 @@ def test_get_age_stat(
                 "p75",
                 "p99",
                 "town"):
-        assert key in json.loads(get_response.data)["data"][0]
+        assert key in get_response.json()["data"][0]

@@ -2,24 +2,9 @@
 
 # Попробовать
 
-Сервис равзвернут на https://egorchistov-restapi.herokuapp.com
-
-## Методы
-
- * POST /imports
-
- * PATCH /imports/$import_id/citizens/$citizen_id
-
- * GET /imports/$import_id/citizens
-
- * GET /imports/$import_id/citizens/birthdays
-
- * GET /imports/$import_id/towns/stat/percentile/age
-
-## Описание api
-
- * [версия 1](https://yadi.sk/i/bE-gmumaIDcPGg)
- * [версия 2](https://yadi.sk/i/dA9umaGbQdMNLw)
+ * [Интерактивная документация](https://egorchistov-restapi.herokuapp.com/docs)
+ * [ТЗ версия 1](https://yadi.sk/i/bE-gmumaIDcPGg)
+ * [ТЗ версия 2](https://yadi.sk/i/dA9umaGbQdMNLw)
 
 # Запуск сервера для разработки
 
@@ -55,30 +40,23 @@ poetry shell
 ```shell script
 env MONGO_URI="mongodb://me:hackme@localhost:27017/" \
 env MONGO_DBNAME="dev"                               \
-gunicorn "api:create_app()"
+uvicorn "api:app" --reload
 ```
 
 Тесты и инструменты для анализа кода
 
 ```shell script
+isort .
+
 flake8
 
 mypy --ignore-missing-imports .
 
 env MONGO_URI="mongodb://me:hackme@localhost:27017/" \
-env MONGO_TESTDBNAME="test"                          \
+env MONGO_DBNAME="test"                              \
 coverage run --source api -m pytest
 
 coverage report -m
-```
-
-При необходимости можно очистить базу данных от записей
-
-```shell script
-env MONGO_URI="mongodb://me:hackme@localhost:27017/" \
-env MONGO_DBNAME="dev"                               \
-env FLASK_APP="api"                                  \
-python -m flask drop-db
 ```
 
 # Деплой на Heroku
@@ -88,5 +66,5 @@ python -m flask drop-db
 ```shell script
 echo 'python-3.8.5' > runtime.txt
 poetry export -f requirements.txt -o requirements.txt
-echo 'web gunicorn "api:create_app()"' > Procfile
+echo 'web: uvicorn "api:app" --host=0.0.0.0 --port $PORT' > Procfile
 ```

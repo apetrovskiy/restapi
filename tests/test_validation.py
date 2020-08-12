@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-from typing import Mapping, Sequence
-
 import pytest
-from marshmallow import ValidationError
+from pydantic import ValidationError
 
-from api.citizen_schema import validate_import_citizens, update_citizens
-from tests import Citizen_s
+from api.schema import Import
 
 
 @pytest.mark.parametrize("data", [
@@ -83,21 +79,22 @@ from tests import Citizen_s
                 "relatives": []
             }
         ]
-    }
-])
-def test_fields_errors(data: Mapping[str, Sequence[Citizen_s]]) -> None:
-    with pytest.raises(ValidationError):
-        validate_import_citizens(data)
-
-    fields = data["citizens"][0]
-    fields.pop("citizen_id")
-
-    with pytest.raises(ValidationError):
-        # Препдолагается, что функция update_citizens сначала проверяет fields
-        update_citizens({}, 1, fields)
-
-
-@pytest.mark.parametrize("data", [
+    },
+    {
+        "citizens": [
+            {
+                "citizen_id": 1,
+                "town": "Москва",
+                "street": "Льва Толстого",
+                "building": "16к7стр5",
+                "apartment": 7,
+                "name": "Иванов Иван Иванович",
+                "birth_date": "26.13.1986",
+                "gender": "male",
+                "relatives": [100]  # Relative does not exist in import
+            }
+        ]
+    },
     {
         "citizens": [
             {
@@ -151,8 +148,6 @@ def test_fields_errors(data: Mapping[str, Sequence[Citizen_s]]) -> None:
         ]
     }
 ])
-def test_relatives_and_ids_errors(
-        data: Mapping[str, Sequence[Citizen_s]]
-) -> None:
+def test_validation(data) -> None:
     with pytest.raises(ValidationError):
-        validate_import_citizens(data)
+        Import(**data)

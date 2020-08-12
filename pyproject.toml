@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "restapi"
-version = "1.1.0"
+version = "2.0.0"
 description = "Тестовое задание REST-сервис на Python"
 
 license = "MIT"
@@ -18,15 +18,17 @@ keywords = ['test task']
 
 [tool.poetry.dependencies]
 python = "^3.8.5"
-flask = "^1.1.2"
-flask-cors = "^3.0.8"
-gunicorn = "^20.0.4"
 numpy = "^1.19.1"
-marshmallow = "^3.7.1"
 pymongo = "^3.11.0"
+fastapi = "^0.61.0"
+uvicorn = "^0.11.8"
+ujson = "^3.1.0"
+dnspython = "^2.0.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8.3"
 mypy = "^0.782"
 pytest = "^6.0.1"
 coverage = "^5.2.1"
+isort = "^5.3.2"
+requests = "^2.24.0"

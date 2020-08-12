@@ -1,16 +1,22 @@
-# -*- coding: utf-8 -*-
 from datetime import date
-from typing import Mapping, Iterable, Any, Dict, List
+from typing import Dict, List
 
 from numpy import percentile
 
-from api.citizen_schema import Citizen
+from api.schema import (AgeStatResponse, BirthdaysResponse, CitizenId,
+                        PrettyCitizens)
 
 
-def calc_birthdays(citizens_data: Mapping[int, Citizen]
-                   ) -> Mapping[str, Iterable[Mapping[str, int]]]:
-    months: Dict[int, Dict[int, Dict[str, int]]] = {
-        i: {} for i in range(1, 13)
+def calc_birthdays(citizens_data: PrettyCitizens) -> BirthdaysResponse.Year:
+    """
+    Возвращает жителей и количество подарков, которые они будут покупать своим
+    ближайшим родственникам (1-го порядка), сгруппированных по месяцам.
+    """
+    months: Dict[int, Dict[
+                           CitizenId,
+                           BirthdaysResponse.Year.PresentsCounter
+    ]] = {
+        month: {} for month in range(1, 13)
     }
 
     for citizen_id, citizen in citizens_data.items():
@@ -18,20 +24,31 @@ def calc_birthdays(citizens_data: Mapping[int, Citizen]
             month = citizens_data[relative_id].birth_date.month
 
             try:
-                months[month][citizen_id]["presents"] += 1
+                months[month][citizen_id].presents += 1
             except KeyError:
-                months[month][citizen_id] = {
-                    "citizen_id": citizen_id,
-                    "presents": 1
-                }
+                months[month][citizen_id] = BirthdaysResponse.Year.\
+                    PresentsCounter(
+                    citizen_id=citizen_id,
+                    presents=1
+                )
 
-    return {str(i): list(months[i].values()) for i in range(1, 13)}
+    presents = BirthdaysResponse.Year(**{
+        str(month): list(
+            months[month].values()
+        ) for month in range(1, 13)
+    })
+
+    return presents
 
 
 def calc_age_by_towns(
-        citizens_data: Mapping[int, Citizen],
-        percentils: Iterable[int] = (50, 75, 99)
-                      ) -> Iterable[Mapping[str, Any]]:
+    citizens_data: PrettyCitizens
+) -> List[AgeStatResponse.TownStat]:
+    """
+    Возвращает статистику по городам для указанного набора данных в разрезе
+    возраста (полных лет) жителей: p50, p75, p99, где число - это значение
+    перцентиля.
+    """
     towns: Dict[str, List[int]] = {}
 
     for citizen in citizens_data.values():
@@ -47,16 +64,19 @@ def calc_age_by_towns(
         except KeyError:
             towns[citizen.town] = [age]
 
-    stats = []
-
-    for town in towns:
-        stat = {"town": town}
-
-        for pv in percentils:
-            stat[f"p{pv}"] = round(
-                percentile(towns[town], pv, interpolation='linear'), 2
+    stats = [
+        AgeStatResponse.TownStat(
+            town=town,
+            p50=round(
+                percentile(towns[town], 50, interpolation='linear'), 2
+            ),
+            p75=round(
+                percentile(towns[town], 75, interpolation='linear'), 2
+            ),
+            p99=round(
+                percentile(towns[town], 99, interpolation='linear'), 2
             )
-
-        stats.append(stat)
+        ) for town in towns
+    ]
 
     return stats

@@ -1,133 +1,63 @@
-# -*- coding: utf-8 -*-
-import datetime
-
+import ujson
 from bson import ObjectId
-from typing import Optional, Mapping, cast, Any
-
-import click
+from fastapi import HTTPException
 from pymongo import MongoClient, UpdateOne
 from pymongo.database import Database
-from flask import current_app, g, Flask
-from flask.cli import with_appcontext
-from pymongo.errors import ConnectionFailure
 
-from api.citizen_schema import NotFound, Citizen, CitizenSchema
+from api.schema import (Citizens, Import, ObjectIdStr, PrettyCitizens,
+                        from_pretty)
 
-__all__ = [
-    "create", "update", "read", "delete", "get_db", "drop_db",
-    "ConnectionFailure"
-]
+from . import config
 
 
 def get_db() -> Database:
-    if 'client' not in g:
-        g.client = MongoClient(current_app.config['MONGO_URI'])
+    """
+    Возвращает текущую базу данных.
+    """
+    client = MongoClient(config.settings.mongo_uri)
 
-    return g.client[current_app.config['MONGO_DBNAME']]
-
-
-def close_db(e: Optional[Exception] = None) -> None:
-    if e is not None:
-        current_app.logger.error(e)
-
-    client = g.pop('client', None)
-
-    if client is not None:
-        client.close()
+    return client[config.settings.mongo_dbname]
 
 
-def drop_db() -> None:
-    get_db()  # Добавляет client в g
-    g.client.drop_database(current_app.config['MONGO_DBNAME'])
-    close_db()
+def create(import_: Import) -> ObjectId:
+    """
+    Сохраняет набор с данными о жителях.
+    """
+    result = get_db().imports.insert_one(ujson.loads(import_.json()))
+    # Collection.insert_one() принимает на вход json, а Model.json()
+    # возвращает строку сериализованную с помощью custom json encoders.
+
+    return result.inserted_id
 
 
-@click.command('drop-db')
-@with_appcontext
-def drop_db_command() -> None:
-    drop_db()
-    click.echo(f"database {current_app.config['MONGO_DBNAME']} is dropped.")
+def read(import_id: ObjectIdStr) -> Citizens:
+    """
+    Возвращает список всех жителей для указанного набора данных.
+    """
+    record = get_db().imports.find_one({"_id": import_id}, {"_id": 0})
+
+    if record is None:
+        raise HTTPException(status_code=404, detail="Import not found")
+
+    return Citizens(**record)
 
 
-def init_app(app: Flask) -> None:
-    app.teardown_appcontext(close_db)
-    app.cli.add_command(drop_db_command)
-
-
-def create(citizens_data: Mapping[int, Citizen]) -> str:
-    citizens_data = CitizenSchema().dump(citizens_data.values(), many=True)
-    current_time = datetime.datetime.utcnow()
-
-    try:
-        result = get_db().imports.insert_one(
-            {
-                "citizens": citizens_data,
-                "created": current_time,
-                "last_updated": current_time
-            }
-        )
-    finally:
-        g.client.close()
-
-    return str(result.inserted_id)
-
-
-def read(import_id: str) -> Mapping[int, Citizen]:
-    """Возвращает набор с данными о жителях."""
-    try:
-        citizens_data = get_db().imports.find_one(
-            {"_id": ObjectId(import_id)},
-            {"_id": 0}
-        )
-    finally:
-        g.client.close()
-
-    if not citizens_data:
-        raise NotFound('import doesn\'t exist')
-
-    citizens_data = CitizenSchema().load(citizens_data["citizens"], many=True)
-
-    return {citizen.citizen_id: citizen for citizen in citizens_data}
-
-
-def update(import_id: str, different_citizens: Mapping[int, Citizen]) -> None:
-    different_citizens = CitizenSchema().dump(
-        different_citizens.values(), many=True
-    )
-
+def update(import_id: ObjectIdStr, different_citizens: PrettyCitizens):
+    """
+    Изменяет информацию о жителях в указанном наборе данных.
+    """
+    record = Citizens(citizens=from_pretty(different_citizens))
     operations = [
         UpdateOne({
-            "_id": ObjectId(import_id),
-            "citizens.citizen_id": cast(
-                Mapping[str, Any], citizen)["citizen_id"]
+            "_id": import_id,
+            "citizens.citizen_id": citizen.citizen_id
         }, {
             "$set": {
-                "citizens.$": citizen
+                "citizens.$": ujson.loads(citizen.json())
             }
-        }) for citizen in different_citizens
-    ] + [
-        UpdateOne(
-            {
-                "_id": ObjectId(import_id)
-            }, {
-                "$set": {
-                    "last_updated": datetime.datetime.utcnow()
-                }
-            })
+        }) for citizen in record.citizens
     ]
+    # UpdateOne.$set принимает на вход json, а Model.json() возвращает строку
+    # сериализованную с помощью custom json encoders.
 
-    try:
-        get_db().imports.bulk_write(operations, ordered=False)
-    finally:
-        g.client.close()
-
-
-def delete(import_id: str) -> None:
-    try:
-        n = get_db().imports.delete_one(
-            {"_id": ObjectId(import_id)}).raw_result["n"]
-    finally:
-        g.client.close()
-
-    if n == 0:
-        raise NotFound('import doesn\'t exist')
+    get_db().imports.bulk_write(operations, ordered=False)
