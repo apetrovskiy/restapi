@@ -17,7 +17,7 @@ docker run                                \
 --name "restapi_dev"                      \
 -d                                        \
 -p 27017:27017                            \
-mongo:4.4.0-bionic
+mongo:latest
 ```
 
 Склонировать репозиторий
@@ -28,11 +28,18 @@ git clone git@github.com:egorchistov/restapi.git
 cd restapi
 ```
 
+Настроить локальную среду
+
+```shell script
+python -m venv venv
+. ./venv/bin/activate
+```
+
 Установить зависимости
 
 ```shell script
-poetry install
-poetry shell
+pip install -r requirements.txt
+pip install -r requirements.dev.txt
 ```
 
 Запустить сервер для разработки
@@ -64,7 +71,6 @@ coverage report -m
 Необходимые для деплоя файлы могут быть получены с помощью следующих комманд
 
 ```shell script
-echo 'python-3.8.5' > runtime.txt
-poetry export -f requirements.txt -o requirements.txt
+echo 'python-3.9.5' > runtime.txt
 echo 'web: uvicorn "api:app" --host=0.0.0.0 --port $PORT' > Procfile
 ```
